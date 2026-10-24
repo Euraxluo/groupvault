@@ -14,11 +14,13 @@ export interface VoteContext {
   proposals: Proposal[]
   loading: boolean
   error: string | null
+  /** Newest proposal id created by this session; null until one is added. */
+  lastAddedId: number | null
   addTransfer: (input: {
     receiverId: string
     amount: string
     description: string
-  }) => Promise<void>
+  }) => Promise<number>
   approve: (proposal: Proposal) => Promise<void>
   refresh: () => Promise<void>
 }
@@ -28,6 +30,7 @@ export function useVotes(daoId: string, proposalIds: number[] = []): VoteContext
   const [proposals, setProposals] = useState<Proposal[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [lastAddedId, setLastAddedId] = useState<number | null>(null)
 
   const client = session
     ? createSputnikClient(session.selector, new NearRpc(getNearConfig()))
@@ -66,9 +69,9 @@ export function useVotes(daoId: string, proposalIds: number[] = []): VoteContext
   const addTransfer = useCallback(
     async (input: { receiverId: string; amount: string; description: string }) => {
       const accountId = requireAccount()
-      if (!client) return
+      if (!client) throw new Error("DAO client is not ready")
       const policy = await client.getPolicy(daoId)
-      await client.addProposal(
+      const receipt = await client.addProposal(
         accountId,
         daoId,
         {
@@ -77,7 +80,20 @@ export function useVotes(daoId: string, proposalIds: number[] = []): VoteContext
         },
         policy.proposal_bond,
       )
+      // Sputnik returns the new id as the call result; fall back to the chain
+      // counter when the wallet does not surface a success value.
+      let id: number
+      if (
+        typeof receipt.successValue === "number" &&
+        Number.isSafeInteger(receipt.successValue)
+      ) {
+        id = receipt.successValue
+      } else {
+        id = await client.getLastProposalId(daoId)
+      }
+      setLastAddedId(id)
       await refresh()
+      return id
     },
     [client, daoId, refresh, session],
   )
@@ -99,5 +115,5 @@ export function useVotes(daoId: string, proposalIds: number[] = []): VoteContext
     [client, stakingClient, daoId, refresh, session],
   )
 
-  return { proposals, loading, error, addTransfer, approve, refresh }
+  return { proposals, loading, error, lastAddedId, addTransfer, approve, refresh }
 }

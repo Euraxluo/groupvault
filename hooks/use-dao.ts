@@ -62,7 +62,7 @@ export function useDao(daoId: string): DaoContext {
       setPolicy(nextPolicy)
       setStakingContract(nextStaking)
       if (nextStaking && accountId) {
-        setDelegation(await staking!.getDelegation(nextStaking, accountId))
+        setDelegation(await staking!.getDelegation(daoId, accountId))
       } else {
         setDelegation("0")
       }

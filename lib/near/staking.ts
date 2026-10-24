@@ -5,7 +5,12 @@ import { signAndSendTransaction, type SignedReceipt } from "./actions"
 import type { NearRpc } from "./rpc"
 
 export interface StakingClient {
-  getDelegation(stakingId: string, accountId: string): Promise<string>
+  /**
+   * Delegated weight is tracked by the DAO, not by the staking contract:
+   * Sputnik's `delegation_balance_of` is a DAO view that reads its staking
+   * contract. Querying the staking account has no such method.
+   */
+  getDelegation(daoId: string, accountId: string): Promise<string>
   storageDeposit(signerId: string, stakingId: string, accountId: string): Promise<SignedReceipt>
   depositStake(
     signerId: string,
@@ -23,9 +28,9 @@ export interface StakingClient {
 
 export function createStakingClient(selector: WalletSelector, rpc: NearRpc): StakingClient {
   return {
-    getDelegation: (stakingId, accountId) =>
+    getDelegation: (daoId, accountId) =>
       rpc.view<{ delegation_balance?: string } | string>({
-        contractId: stakingId,
+        contractId: daoId,
         methodName: "delegation_balance_of",
         args: { account_id: accountId },
       }).then((value) =>

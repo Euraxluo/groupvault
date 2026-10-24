@@ -124,6 +124,18 @@ export function GroupTreasury({ daoId }: { daoId: string }) {
             {busy === "propose" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
             Add Transfer proposal
           </Button>
+          {votes.lastAddedId !== null ? (
+            <p className="text-[11px] text-muted-foreground">
+              Proposal{" "}
+              <a
+                className="font-mono underline"
+                href={`/dao/${daoId}/proposals?ids=${votes.lastAddedId}`}
+              >
+                #{votes.lastAddedId}
+              </a>{" "}
+              created. Open it to approve.
+            </p>
+          ) : null}
           <p className="text-[11px] text-muted-foreground">
             Approval automatically schedules execution at threshold. There is no
             extra execute signature.

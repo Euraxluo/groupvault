@@ -96,6 +96,7 @@ describe("TokenWeight approval gate", () => {
         client: {
           getPolicy,
           getStakingContract,
+          getLastProposalId: vi.fn(),
           actProposal,
           addProposal: vi.fn(),
           getProposal: vi.fn(),
@@ -123,6 +124,7 @@ describe("TokenWeight approval gate", () => {
         getPolicy,
         getStakingContract,
         actProposal,
+        getLastProposalId: vi.fn(),
         addProposal: vi.fn(),
         getProposal: vi.fn(),
       },
@@ -138,6 +140,9 @@ describe("TokenWeight approval gate", () => {
         proposal.kind,
       ),
     )
+    // `delegation_balance_of` is a DAO view; querying the staking account
+    // returns "MethodNotFound" and would silently pin weight at zero.
+    expect(getDelegation).toHaveBeenCalledWith("dao.testnet", "alice.testnet")
   })
 
   it("renders the exact proposal kind in the approval UI", async () => {

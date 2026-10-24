@@ -1,6 +1,7 @@
 "use client"
 
 import { use, useState } from "react"
+import { useSearchParams } from "next/navigation"
 
 import { MobileNavbar } from "@/components/mobile-navbar"
 import { ProposalList } from "@/components/group-treasury"
@@ -14,7 +15,12 @@ export default function ProposalsPage({
   params: Promise<{ daoId: string }>
 }) {
   const { daoId } = use(params)
-  const [ids, setIds] = useState<number[]>([])
+  const searchParams = useSearchParams()
+  const requestedIds = (searchParams.get("ids") ?? "")
+    .split(",")
+    .map((value) => Number(value.trim()))
+    .filter((value) => Number.isSafeInteger(value) && value >= 0)
+  const [ids, setIds] = useState<number[]>(requestedIds)
   const [candidate, setCandidate] = useState("")
   const votes = useVotes(daoId, ids)
 

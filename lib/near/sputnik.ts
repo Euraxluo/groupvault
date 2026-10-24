@@ -95,6 +95,7 @@ export function transferKind(input: {
 export interface SputnikClient {
   getPolicy(daoId: string): Promise<Policy>
   getProposal(daoId: string, id: number): Promise<Proposal>
+  getLastProposalId(daoId: string): Promise<number>
   getStakingContract(daoId: string): Promise<string | null>
   addProposal(
     signerId: string,
@@ -120,6 +121,11 @@ export function createSputnikClient(selector: WalletSelector, rpc: NearRpc): Spu
         contractId: daoId,
         methodName: "get_proposal",
         args: { id },
+      }),
+    getLastProposalId: (daoId) =>
+      rpc.view<number>({
+        contractId: daoId,
+        methodName: "get_last_proposal_id",
       }),
     getStakingContract: (daoId) =>
       rpc.view<string | null>({

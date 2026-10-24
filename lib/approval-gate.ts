@@ -23,7 +23,8 @@ export async function applyApprovalWithWeightGate(input: {
     if (!stakingId) {
       throw new Error("TokenWeight is enabled but staking is not set")
     }
-    const delegation = await staking.getDelegation(stakingId, accountId)
+    // `delegation_balance_of` is a DAO view that reads its staking contract.
+    const delegation = await staking.getDelegation(daoId, accountId)
     if (BigInt(delegation) <= 0n) {
       throw new Error("Zero voting weight: stake the join FT before voting")
     }
