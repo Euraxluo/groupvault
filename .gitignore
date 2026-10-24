@@ -6,9 +6,20 @@
 # next.js
 /.next/
 /out/
+/next-env.d.ts
 
 # production
 /build
+
+# runtime and test output
+/.runtime/
+/coverage/
+/playwright-report/
+/test-results/
+/indexer/data/
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
 
 # debug
 npm-debug.log*
@@ -18,10 +29,17 @@ yarn-error.log*
 
 # env files
 .env*
+!.env.example
 
 # vercel
 .vercel
 
 # typescript
 *.tsbuildinfo
-next-env.d.ts
+
+# rust
+/target/
+/contracts/target/
+
+# macOS
+.DS_Store

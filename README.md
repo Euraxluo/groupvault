@@ -1,30 +1,55 @@
-# frontend
+# GroupVault
 
-*Automatically synced with your [v0.dev](https://v0.dev) deployments*
+GroupVault is a NEAR testnet demo for paid NEP-141 groups that convert into a
+Sputnik DAO with one owner signature. Chat messages are public plaintext logs;
+membership does not grant voting weight.
 
-[![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=for-the-badge&logo=vercel)](https://vercel.com/euraxluos-projects/v0-frontend)
-[![Built with v0](https://img.shields.io/badge/Built%20with-v0.dev-black?style=for-the-badge)](https://v0.dev/chat/projects/DPZKmgu5sxL)
+The frontend is a clean archive of the existing Next.js multisig shell, pinned
+at `ddb4ac2051ee0a3d931b2e0d69b8ba15d46c954a`. All GroupVault work happens in
+this repository, never in the source checkout.
 
-## Overview
+## Stack
 
-This repository will stay in sync with your deployed chats on [v0.dev](https://v0.dev).
-Any changes you make to your deployed app will be automatically pushed to this repository from [v0.dev](https://v0.dev).
+- Next.js 15.2.4, React 19, TypeScript, Tailwind and the copied Radix/shadcn UI
+- Rust + `near-sdk` GroupVault contract (T003 onward)
+- Finality-aware TypeScript indexer with SQLite (T006)
+- `near-workspaces-rs` sandbox tests for FT callbacks and Convert
+- NEAR testnet only
 
-## Deployment
+## Prerequisites
 
-Your project is live at:
+- Node 22 (`.nvmrc`), pnpm 12.9.1 through Corepack
+- Rust with the `wasm32-unknown-unknown` target
+- NEAR CLI only when a deployment task explicitly requires it
 
-**[https://vercel.com/euraxluos-projects/v0-frontend](https://vercel.com/euraxluos-projects/v0-frontend)**
+## Local commands
 
-## Build your app
+```bash
+corepack enable
+pnpm install --frozen-lockfile
+pnpm lint
+pnpm test
+pnpm build
+pnpm dev -- --hostname 127.0.0.1 --port 3000
+```
 
-Continue building your app on:
+`pnpm test:web` is the Playwright entry point reserved for the browser flows.
+The testnet deploy and indexer scripts are added by their owning tasks so that
+no command can report a fake success before the implementation exists.
 
-**[https://v0.dev/chat/projects/DPZKmgu5sxL](https://v0.dev/chat/projects/DPZKmgu5sxL)**
+## Product invariants
 
-## How It Works
+- Convert is exactly one wallet signature to GroupVault, then Sputnik
+  `factory.create`; `dao_id` is written only after a successful boolean callback.
+- Join payment is one `ft_transfer_call`; every failure returns the full unused
+  token amount and creates no membership.
+- Group chat is public `env::log_str` data plus an indexer. There is no E2E
+  privacy claim and there is no server signer.
+- Staking the same join FT is the only source of TokenWeight.
+- GroupVault never holds user keys and never signs a user product action.
 
-1. Create and modify your project using [v0.dev](https://v0.dev)
-2. Deploy your chats from the v0 interface
-3. Changes are automatically pushed to this repository
-4. Vercel deploys the latest version from this repository
+## Documentation
+
+- Planning source: `/Users/echo/project/groupvault-docs/plans/`
+- Task board: `/Users/echo/project/groupvault-docs/plans/TASKS.md`
+- Frontend pin: `/Users/echo/project/groupvault-docs/orchestration/frontend-copy-pin.txt`
