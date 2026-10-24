@@ -99,5 +99,5 @@
     "sputnik_staking_account_created": "deployer createAccount (interrupted earlier attempt; key persisted before deploy)",
     "sputnik_staking_owner_wired": "unset until the browser proposal (T013)"
   },
-  "generated_at": "2026-10-24T17:43:14.725Z"
+  "generated_at": "2026-10-24T17:52:20.545Z"
 }

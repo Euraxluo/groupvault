@@ -77,6 +77,12 @@ load; `INDEXER_RPC_URL` should point at a dedicated provider for long runs.
 
 ## Documentation
 
+- Local demo order (install → services → wallet → product path → e2e):
+  `docs/DEMO-RUNBOOK.md`
+- Deployment and pinned staking rebuild: `docs/TESTNET-DEPLOYMENT.md`
+- Release gate and verification proof: `docs/RELEASE-CHECKLIST.md`
+- Contracts, architecture and decisions: `docs/CONTRACT-INTERFACES.md`,
+  `docs/ARCHITECTURE.md`, `docs/DECISIONS.md`
 - Planning source: `/Users/echo/project/groupvault-docs/plans/`
 - Task board: `/Users/echo/project/groupvault-docs/plans/TASKS.md`
 - Frontend pin: `/Users/echo/project/groupvault-docs/orchestration/frontend-copy-pin.txt`

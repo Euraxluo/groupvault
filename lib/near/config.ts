@@ -24,7 +24,7 @@ export function getNearConfig(): NearConfig {
   return {
     network,
     rpcUrl: (
-      process.env.NEXT_PUBLIC_NEAR_RPC_URL ?? "https://rpc.testnet.near.org"
+      process.env.NEXT_PUBLIC_NEAR_RPC_URL ?? "https://test.rpc.fastnear.com"
     ).trim(),
     groupVaultContractId: (
       process.env.NEXT_PUBLIC_GROUPVAULT_CONTRACT ?? ""

@@ -69,8 +69,9 @@ export function ConvertForm({
           <CardContent className="space-y-2 p-4 text-xs">
             <p className="font-medium">This is not a threshold ceremony.</p>
             <p className="text-muted-foreground">
-              No DKG, no FROST, no key resharing. The current members become the
-              initial Sputnik council snapshot (up to 50).
+              One owner signature creates the DAO. No key ceremony or key
+              resharing is involved; the current members become the initial
+              Sputnik council snapshot (up to 50).
             </p>
             <Badge variant="outline" className="font-mono">
               deposit {CONVERT_DEPOSIT} yoctoNEAR

@@ -18,7 +18,7 @@ and any change requires a new written decision here before code changes.
 | O3 | approved: enable staking after Convert via `SetStakingContract` | GroupVault never sets staking. Staking is deployed by the deployer, then a council proposal points the DAO at it. |
 | O4 | approved: members may be added after Convert without joining council | GroupVault membership and the DAO policy are separate. New members never gain council seats or voting weight automatically. |
 | O5 | approved: log-only messages plus a light indexer | `send_message` emits one canonical JSON `env::log_str`; no on-chain buffer. The UI must state that chat is public and that indexing may lag. |
-| O6 | approved: working directory and public name are `groupvault` | Code root is `/Users/echo/project/groupvault/`; no `chatme.near` binding. |
+| O6 | approved: working directory and public name are `groupvault` | Code root is `/Users/echo/project/groupvault/`; no legacy chat product-name binding. |
 
 ## Non-negotiable boundaries
 

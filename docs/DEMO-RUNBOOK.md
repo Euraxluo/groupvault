@@ -59,7 +59,7 @@ The indexer prints its listen URL. `curl http://127.0.0.1:8787/health` must show
 3. Never reuse the deployer account as A or B.
 
 For unattended testnet runs, Connect → **Keypair (demo)** signs locally with an
-`ed25519:` key held only in that tab's `sessionStorage`. The automated driver
+ed25519 secret key held only in that tab's `sessionStorage`. The automated driver
 injects credentials from `DEMO_PRIVATE_KEY_A/B` or `~/.near-credentials` and
 never writes a key into the repo or evidence file. MyNearWallet remains the
 default product path.
