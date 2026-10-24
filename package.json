@@ -13,7 +13,9 @@
     "lint": "eslint app/layout.tsx app/page.tsx components/error-boundary.tsx tests --max-warnings=0",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:web": "playwright test"
+    "test:web": "playwright test",
+    "indexer:dev": "pnpm --dir indexer dev",
+    "indexer:build": "pnpm --dir indexer build"
   },
   "dependencies": {
     "@emotion/is-prop-valid": "latest",

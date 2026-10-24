@@ -34,8 +34,26 @@ pnpm dev -- --hostname 127.0.0.1 --port 3000
 ```
 
 `pnpm test:web` is the Playwright entry point reserved for the browser flows.
-The testnet deploy and indexer scripts are added by their owning tasks so that
+The indexer runs with `pnpm indexer:dev` (or `pnpm indexer:build` for the
+compiled server). Testnet deploy scripts are added by their owning task so that
 no command can report a fake success before the implementation exists.
+
+## Indexer
+
+```bash
+pnpm --dir indexer install --frozen-lockfile
+GROUPVAULT_CONTRACT_ID=<groupvault.testnet> \
+INDEXER_START_BLOCK=0 \
+INDEXER_DB_PATH=./data/messages.sqlite \
+INDEXER_PORT=8787 \
+  pnpm indexer:dev
+```
+
+`INDEXER_START_BLOCK=0` (or an empty value) resolves the current finalized head
+once; it never scans from genesis. Set `INDEXER_INITIAL_BACKFILL_BLOCKS` for a
+bounded lookback. The cursor and messages commit in one SQLite transaction, so
+a restart resumes from the last committed block and replayed receipts stay
+idempotent on `(receipt_id, log_index)`.
 
 ## Product invariants
 
