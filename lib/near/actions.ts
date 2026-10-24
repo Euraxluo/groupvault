@@ -41,6 +41,8 @@ export function buildTransaction(
 export interface SignedReceipt {
   transactionHash: string
   receiptIds: string[]
+  /** JSON-decoded SuccessValue when the wallet exposes it. */
+  successValue?: unknown
 }
 
 /**
@@ -63,10 +65,24 @@ export async function signAndSendTransaction(
     actions: [buildFunctionCall(input)],
   })
 
+  const rawValue = (outcome?.status as { SuccessValue?: string } | undefined)
+    ?.SuccessValue
+  let successValue: unknown
+  if (typeof rawValue === "string" && rawValue.length > 0) {
+    try {
+      successValue = JSON.parse(
+        Buffer.from(rawValue, "base64").toString("utf8"),
+      )
+    } catch {
+      successValue = undefined
+    }
+  }
+
   return {
     transactionHash: outcome?.transaction_outcome?.id ?? outcome?.transaction?.hash ?? "",
     receiptIds: (outcome?.receipts_outcome ?? []).map(
       (receipt: { id: string }) => receipt.id,
     ),
+    successValue,
   }
 }

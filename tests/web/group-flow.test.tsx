@@ -78,7 +78,11 @@ beforeEach(() => {
 
 describe("create group flow", () => {
   it("sends the wallet-signed create with the configured FT", async () => {
-    create.mockResolvedValue({ transactionHash: "tx-create", receiptIds: ["r"] })
+    create.mockResolvedValue({
+      transactionHash: "tx-create",
+      receiptIds: ["r"],
+      groupId: 7,
+    })
     render(<CreateGroupDialog open onOpenChange={() => {}} />)
 
     fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Builders" } })
@@ -98,7 +102,7 @@ describe("create group flow", () => {
       },
       "500000000000000000000000",
     )
-    await waitFor(() => expect(push).toHaveBeenCalledWith("/groups"))
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/groups/7"))
   })
 
   it("blocks an empty group name before opening the wallet", async () => {

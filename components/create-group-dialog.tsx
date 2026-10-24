@@ -55,7 +55,7 @@ export function CreateGroupDialog({ open, onOpenChange }: CreateGroupDialogProps
       .filter(Boolean)
 
     try {
-      await create(
+      const receipt = await create(
         {
           name: name.trim(),
           description: description.trim(),
@@ -66,7 +66,9 @@ export function CreateGroupDialog({ open, onOpenChange }: CreateGroupDialogProps
         CREATE_GROUP_DEPOSIT,
       )
       onOpenChange(false)
-      router.push("/groups")
+      router.push(
+        receipt.groupId === null ? "/groups" : `/groups/${receipt.groupId}`,
+      )
     } catch {
       // The hook exposes the wallet/RPC error; do not invent success.
     }

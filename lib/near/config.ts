@@ -7,28 +7,35 @@ export interface NearConfig {
   indexerUrl: string
 }
 
-function read(name: string, fallback = ""): string {
-  const value = process.env[name]
-  return value === undefined ? fallback : value.trim()
-}
-
 /**
  * Public, NEXT_PUBLIC_-only configuration. Nothing here is a secret and the
  * app never receives a private key.
+ *
+ * Each key is accessed with a static literal so the Next.js compiler can
+ * inline it into the browser bundle. Dynamic `process.env[name]` access is not
+ * inlined and would leave every client value empty.
  */
 export function getNearConfig(): NearConfig {
-  const network = read("NEXT_PUBLIC_NEAR_NETWORK", "testnet")
+  const network = (process.env.NEXT_PUBLIC_NEAR_NETWORK ?? "testnet").trim()
   if (network !== "testnet" && network !== "mainnet") {
     throw new Error(`Unsupported NEXT_PUBLIC_NEAR_NETWORK: ${network}`)
   }
 
   return {
     network,
-    rpcUrl: read("NEXT_PUBLIC_NEAR_RPC_URL", "https://rpc.testnet.near.org"),
-    groupVaultContractId: read("NEXT_PUBLIC_GROUPVAULT_CONTRACT"),
-    joinFtContractId: read("NEXT_PUBLIC_JOIN_FT"),
-    factoryId: read("NEXT_PUBLIC_FACTORY", "sputnikv2.testnet"),
-    indexerUrl: read("NEXT_PUBLIC_INDEXER_URL", "http://127.0.0.1:8787"),
+    rpcUrl: (
+      process.env.NEXT_PUBLIC_NEAR_RPC_URL ?? "https://rpc.testnet.near.org"
+    ).trim(),
+    groupVaultContractId: (
+      process.env.NEXT_PUBLIC_GROUPVAULT_CONTRACT ?? ""
+    ).trim(),
+    joinFtContractId: (process.env.NEXT_PUBLIC_JOIN_FT ?? "").trim(),
+    factoryId: (
+      process.env.NEXT_PUBLIC_FACTORY ?? "sputnikv2.testnet"
+    ).trim(),
+    indexerUrl: (
+      process.env.NEXT_PUBLIC_INDEXER_URL ?? "http://127.0.0.1:8787"
+    ).trim(),
   }
 }
 

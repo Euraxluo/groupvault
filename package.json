@@ -14,6 +14,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:web": "playwright test",
+    "e2e:testnet": "playwright test --config playwright.e2e.config.ts",
     "indexer:dev": "pnpm --dir indexer dev",
     "indexer:build": "pnpm --dir indexer build",
     "deploy:testnet": "tsx scripts/deploy-testnet.ts",

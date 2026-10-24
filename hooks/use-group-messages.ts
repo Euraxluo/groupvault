@@ -70,7 +70,25 @@ export function useGroupMessages(groupId: number): GroupMessagesState {
       setError(null)
       try {
         await client.sendMessage(accountId, groupId, text)
-        await refresh()
+        // Wait briefly for the finalized log to reach the indexer. If it has
+        // not arrived, the UI keeps its explicit indexing-delay state.
+        const config = getNearConfig()
+        for (let attempt = 0; attempt < 10; attempt += 1) {
+          const page = await getMessages(config.indexerUrl, groupId)
+          if (
+            page.items.some(
+              (message) =>
+                message.sender === accountId && message.text === text,
+            )
+          ) {
+            setMessages(page.items)
+            cursor.current = page.next_cursor
+            setIndexing(false)
+            return
+          }
+          await new Promise((resolve) => setTimeout(resolve, 1500))
+        }
+        setIndexing(true)
       } catch (reason) {
         const message = reason instanceof Error ? reason.message : String(reason)
         setError(message)

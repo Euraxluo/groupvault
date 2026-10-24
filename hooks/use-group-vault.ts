@@ -77,7 +77,10 @@ export function useCreateGroup() {
   const [error, setError] = useState<string | null>(null)
 
   const create = useCallback(
-    async (input: CreateGroupInput, deposit: string): Promise<SignedReceipt> => {
+    async (
+      input: CreateGroupInput,
+      deposit: string,
+    ): Promise<SignedReceipt & { groupId: number | null }> => {
       if (!session) throw new Error("Wallet session is not ready")
       const accountId = session.selector.store
         .getState()
@@ -93,7 +96,28 @@ export function useCreateGroup() {
       setSubmitting(true)
       setError(null)
       try {
-        return await client.createGroup(accountId, input, deposit)
+        const receipt = await client.createGroup(accountId, input, deposit)
+
+        // Prefer the contract return value. If the wallet does not expose it,
+        // confirm the new group from bounded chain state instead of assuming 0.
+        let groupId: number | null = null
+        if (
+          typeof receipt.successValue === "number" &&
+          Number.isSafeInteger(receipt.successValue)
+        ) {
+          groupId = receipt.successValue
+        } else {
+          for (let attempt = 0; attempt < 8 && groupId === null; attempt += 1) {
+            const groups = await client.getGroups(0, 50)
+            const owned = groups
+              .filter((group) => group.owner === accountId)
+              .sort((left, right) => right.id - left.id)
+            if (owned[0]) groupId = owned[0].id
+            else await new Promise((resolve) => setTimeout(resolve, 1500))
+          }
+        }
+
+        return { ...receipt, groupId }
       } catch (reason) {
         const message = reason instanceof Error ? reason.message : String(reason)
         setError(message)
