@@ -431,10 +431,46 @@ test.describe("governance", () => {
     if (!evidence?.dao_id) throw new Error("Governance evidence is incomplete")
 
     const sent = recordSentTransactions(page)
-    await page.goto(`/dao/${evidence.dao_id}/treasury`)
-    await connectWalletForDemo(page, "A")
     const amount = process.env.DEMO_TRANSFER_AMOUNT ?? "1000000000000000000000000"
     const receiver = evidence.receiver_account_id
+    const latestId =
+      (await viewCall<number>(context.request, evidence.dao_id, "get_last_proposal_id")) - 1
+    const existing = latestId >= 0
+      ? await viewCall<{ kind: Record<string, unknown>; status: string }>(
+          context.request,
+          evidence.dao_id,
+          "get_proposal",
+          { id: latestId },
+        ).catch(() => null)
+      : null
+    // A pending Transfer to the same receiver from an earlier attempt can be
+    // reused; re-proposing would spend another 1 NEAR bond.
+    if (
+      existing?.status === "InProgress" &&
+      JSON.stringify(existing.kind).includes(receiver)
+    ) {
+      await page.goto(`/dao/${evidence.dao_id}/proposals?ids=${latestId}`)
+      await connectWalletForDemo(page, "B")
+      await page.getByRole("button", { name: /Approve exact kind/i }).click()
+      await expect(page.getByText(/Zero voting weight/i)).toBeVisible({ timeout: 60_000 })
+      const after = await viewCall<{ status: string }>(
+        context.request,
+        evidence.dao_id,
+        "get_proposal",
+        { id: latestId },
+      )
+      expect(after.status).toBe("InProgress")
+      saveEvidence({
+        ...loadEvidence(),
+        proposal_id: latestId,
+        zero_weight_rejected: true,
+        proposal_status_after_rejection: after.status,
+      })
+      return
+    }
+
+    await page.goto(`/dao/${evidence.dao_id}/treasury`)
+    await connectWalletForDemo(page, "A")
 
     // Only fund when the DAO cannot already cover the transfer (a resumed run
     // must not require another 1 NEAR from A).

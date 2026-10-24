@@ -113,14 +113,21 @@ export function useVotes(daoId: string, proposalIds: number[] = []): VoteContext
       const accountId = requireAccount()
       if (!client || !stakingClient) return
 
-      await applyApprovalWithWeightGate({
-        daoId,
-        proposal,
-        accountId,
-        client,
-        staking: stakingClient,
-      })
-      await refresh()
+      try {
+        await applyApprovalWithWeightGate({
+          daoId,
+          proposal,
+          accountId,
+          client,
+          staking: stakingClient,
+        })
+        await refresh()
+      } catch (reason) {
+        // Surface the gate's refusal (e.g. zero voting weight) instead of
+        // letting the click fail silently with no feedback.
+        setError(reason instanceof Error ? reason.message : String(reason))
+        throw reason
+      }
     },
     [client, stakingClient, daoId, refresh, session],
   )

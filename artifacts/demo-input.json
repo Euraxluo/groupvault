@@ -9,7 +9,7 @@
   "transfer_amount": "1000000000000000000000000",
   "group_id": 13,
   "create_tx": "8PVskrCbShWAfzjPTkbWz4o4eCrZK4yofmyCwJxqZ2k5",
-  "recorded_at": "2026-10-24T17:19:57.779Z",
+  "recorded_at": "2026-10-24T17:42:48.351Z",
   "join_tx": "5US1FF1hYuV31nMDEJha3vdrDYDZmap7THe8DZvnz75R",
   "message_receipt_ids": [
     "5N9aenFotaA9pkzcoyUyhDogGZEhMhgkjePTno5Lgmsu"
@@ -29,10 +29,10 @@
   "delegate_tx": "AXfbyoQfktodrXG5a9PDKVWbY7hAJaEH5iZW9AZCeTAe",
   "dao_fund_tx": "B3Uhfdc8a4akTgVR5Q2k7MvehknLvrwDzUUVp66RL9ub",
   "transfer_proposal_id": 3,
-  "proposal_id": 3,
+  "proposal_id": 4,
   "proposal_status_after_approve": "Approved",
   "receiver_balance_before": "342673774963561765339998",
-  "receiver_balance_after": "1342673774963561765339998",
+  "receiver_balance_after": "2342138115110949199999989",
   "tokenweight_policy": "TokenWeight",
   "tokenweight_threshold": [
     1,
@@ -43,5 +43,8 @@
   "zero_weight_account": "gv-b-1024-210252.testnet",
   "zero_weight_delegation": "0",
   "dao_balance_before": "14000000000000000000000000",
-  "dao_balance_after": "13000000000000000000000000"
+  "dao_balance_after": "13000000000000000000000000",
+  "zero_weight_rejected": true,
+  "proposal_status_after_rejection": "InProgress",
+  "transfer_approve_tx": "DJ4aVEDHmP54osYnM7UzxL5otWvcGq3ookPUJsAiK6Dw"
 }
