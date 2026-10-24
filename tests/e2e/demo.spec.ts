@@ -231,19 +231,53 @@ test.describe("governance", () => {
     if (!staking) throw new Error("DEMO_STAKING_CONTRACT is required")
     expect(staking).toMatch(/\.testnet$/)
 
+    // Already on chain from an earlier partial run: nothing to redo.
+    const current = await viewCall<string | null>(
+      context.request,
+      evidence.dao_id,
+      "get_staking_contract",
+    )
+    if (current === staking) {
+      saveEvidence({ ...loadEvidence(), staking_contract_id: staking })
+      return
+    }
+
     const sent = recordSentTransactions(page)
     await page.goto(`/dao/${evidence.dao_id}/staking/setup`)
     await connectWalletForDemo(page, "A")
-    await page.getByPlaceholder("staking account ID").fill(staking)
-    await page.getByRole("button", { name: /Add SetStakingContract proposal/i }).click()
-    await waitForWalletApproval(page, "add_proposal SetStakingContract")
-    const proposalTx = await recordedTx(page, sent, evidence.owner_account_id, "add_proposal")
-
-    const proposalId = await viewCall<number>(
+    // Resume a pending SetStakingContract proposal instead of paying another
+    // bond when an earlier attempt already created one.
+    const nextId = await viewCall<number>(
       context.request,
       evidence.dao_id,
       "get_last_proposal_id",
     )
+    let proposalId = nextId - 1
+    let proposalTx = evidence.set_staking_tx ?? ""
+    const pending = proposalId >= 0
+      ? await viewCall<{ kind: Record<string, unknown>; status: string }>(
+          context.request,
+          evidence.dao_id,
+          "get_proposal",
+          { id: proposalId },
+        ).catch(() => null)
+      : null
+    const alreadyProposed =
+      pending?.status === "InProgress" &&
+      JSON.stringify(pending.kind).includes(staking)
+
+    if (!alreadyProposed) {
+      await page.getByPlaceholder("staking account ID").fill(staking)
+      await page.getByRole("button", { name: /Add SetStakingContract proposal/i }).click()
+      await waitForWalletApproval(page, "add_proposal SetStakingContract")
+      proposalTx = await recordedTx(page, sent, evidence.owner_account_id, "add_proposal")
+      proposalId = (await viewCall<number>(
+        context.request,
+        evidence.dao_id,
+        "get_last_proposal_id",
+      )) - 1
+    }
+
     await page.goto(`/dao/${evidence.dao_id}/proposals?ids=${proposalId}`)
     await page.getByRole("button", { name: /Approve exact kind/i }).click()
     await waitForWalletApproval(page, "act_proposal A")
@@ -273,6 +307,19 @@ test.describe("governance", () => {
     skipUnlessGovernance()
     if (!evidence?.dao_id) throw new Error("Convert must be complete before governance")
 
+    const alreadyTokenWeight = async () =>
+      (
+        await viewCall<{ default_vote_policy: { weight_kind: string } }>(
+          context.request,
+          evidence.dao_id!,
+          "get_policy",
+        )
+      ).default_vote_policy.weight_kind === "TokenWeight"
+    if (await alreadyTokenWeight()) {
+      saveEvidence({ ...loadEvidence(), tokenweight_policy_tx: "already-applied" })
+      return
+    }
+
     const sent = recordSentTransactions(page)
     await page.goto(`/dao/${evidence.dao_id}/staking/setup`)
     await connectWalletForDemo(page, "A")
@@ -280,11 +327,10 @@ test.describe("governance", () => {
     await waitForWalletApproval(page, "add_proposal TokenWeight")
     const policyTx = await recordedTx(page, sent, evidence.owner_account_id, "add_proposal")
 
-    const proposalId = await viewCall<number>(
-      context.request,
-      evidence.dao_id,
-      "get_last_proposal_id",
-    )
+    // `get_last_proposal_id` is the next counter, so the newest existing id is
+    // that value minus one.
+    const proposalId =
+      (await viewCall<number>(context.request, evidence.dao_id, "get_last_proposal_id")) - 1
     await page.goto(`/dao/${evidence.dao_id}/proposals?ids=${proposalId}`)
     await page.getByRole("button", { name: /Approve exact kind/i }).click()
     await waitForWalletApproval(page, "act_proposal A")
@@ -329,6 +375,18 @@ test.describe("governance", () => {
     const weightBefore = BigInt(
       await viewCall<string>(context.request, evidence.dao_id, "delegation_balance_of", payload),
     )
+    // Resuming after a partial run: stake already delegated, so there is
+    // nothing to repeat. Weight must stay positive, not grow again.
+    if (weightBefore > 0n) {
+      saveEvidence({
+        ...loadEvidence(),
+        delegation_before: loadEvidence().delegation_before ?? "0",
+        delegation: weightBefore.toString(),
+        stake_tx: loadEvidence().stake_tx ?? "already-delegated",
+        delegate_tx: loadEvidence().delegate_tx ?? "already-delegated",
+      })
+      return
+    }
 
     const sent = recordSentTransactions(page)
     await page.goto(`/dao/${evidence.dao_id}/staking/setup`)
@@ -377,10 +435,21 @@ test.describe("governance", () => {
     await connectWalletForDemo(page, "A")
     const amount = process.env.DEMO_TRANSFER_AMOUNT ?? "1000000000000000000000000"
     const receiver = evidence.receiver_account_id
-    await page.getByLabel("Fund amount (yoctoNEAR)").fill(amount)
-    await page.getByRole("button", { name: /Fund DAO from wallet/i }).click()
-    await waitForWalletApproval(page, "fund DAO")
-    const fundTx = await recordedTx(page, sent, evidence.owner_account_id, "transfer")
+
+    // Only fund when the DAO cannot already cover the transfer (a resumed run
+    // must not require another 1 NEAR from A).
+    const daoAmount = BigInt(
+      await viewCall<{ amount: string }>(context.request, evidence.dao_id, "get_staking_contract")
+        .then(() => nearBalance(context.request, evidence.dao_id!))
+        .catch(() => "0"),
+    )
+    let fundTx = evidence.dao_fund_tx ?? ""
+    if (daoAmount < BigInt(amount)) {
+      await page.getByLabel("Fund amount (yoctoNEAR)").fill(amount)
+      await page.getByRole("button", { name: /Fund DAO from wallet/i }).click()
+      await waitForWalletApproval(page, "fund DAO")
+      fundTx = await recordedTx(page, sent, evidence.owner_account_id, "Transfer")
+    }
 
     await page.getByPlaceholder("receiver.testnet").fill(receiver)
     await page.getByPlaceholder("amount in yoctoNEAR").fill(amount)
@@ -389,11 +458,10 @@ test.describe("governance", () => {
     await waitForWalletApproval(page, "add_proposal Transfer")
     const proposalTx = await recordedTx(page, sent, evidence.owner_account_id, "add_proposal")
 
-    const proposalId = await viewCall<number>(
-      context.request,
-      evidence.dao_id,
-      "get_last_proposal_id",
-    )
+    // `get_last_proposal_id` is the next counter, so the newest existing id is
+    // that value minus one.
+    const proposalId =
+      (await viewCall<number>(context.request, evidence.dao_id, "get_last_proposal_id")) - 1
     const before = await viewCall<{ status: string }>(
       context.request,
       evidence.dao_id,
@@ -402,8 +470,10 @@ test.describe("governance", () => {
     )
 
     // B has no stake, so the gate must reject before any wallet approval.
-    await page.goto(`/dao/${evidence.dao_id}/proposals?ids=${proposalId}`)
+    // Connect first: navigating after a demo-keypair connect can reset the
+    // in-memory session and silently fall back to A, which would approve.
     await connectWalletForDemo(page, "B")
+    await page.goto(`/dao/${evidence.dao_id}/proposals?ids=${proposalId}`)
     await page.getByRole("button", { name: /Approve exact kind/i }).click()
     await expect(page.getByText(/Zero voting weight/i)).toBeVisible({ timeout: 60_000 })
 

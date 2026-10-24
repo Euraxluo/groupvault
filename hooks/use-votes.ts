@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { getConnectedAccountId } from "@/lib/near/selector"
 
 import { getNearConfig } from "@/lib/near/config"
@@ -32,12 +32,22 @@ export function useVotes(daoId: string, proposalIds: number[] = []): VoteContext
   const [error, setError] = useState<string | null>(null)
   const [lastAddedId, setLastAddedId] = useState<number | null>(null)
 
-  const client = session
-    ? createSputnikClient(session.selector, new NearRpc(getNearConfig()))
-    : null
-  const stakingClient = session
-    ? createStakingClient(session.selector, new NearRpc(getNearConfig()))
-    : null
+  // Memoized: a fresh client each render would change `refresh` identity and
+  // loop the proposal fetch until the public RPC starts returning errors.
+  const client = useMemo(
+    () =>
+      session
+        ? createSputnikClient(session.selector, new NearRpc(getNearConfig()))
+        : null,
+    [session],
+  )
+  const stakingClient = useMemo(
+    () =>
+      session
+        ? createStakingClient(session.selector, new NearRpc(getNearConfig()))
+        : null,
+    [session],
+  )
 
   const refresh = useCallback(async () => {
     if (!client) return
@@ -89,7 +99,7 @@ export function useVotes(daoId: string, proposalIds: number[] = []): VoteContext
       ) {
         id = receipt.successValue
       } else {
-        id = await client.getLastProposalId(daoId)
+        id = await client.getNewestProposalId(daoId)
       }
       setLastAddedId(id)
       await refresh()

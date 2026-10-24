@@ -1,8 +1,9 @@
 # GroupVault Demo Runbook
 
-Status: base + join FT are live on NEAR testnet; create → join → chat → Convert
-has been proven end-to-end by the Playwright journey (T011). Staking/Transfer
-remain gated by T012-T013.
+Status: live on NEAR testnet through the full governance path. Proven
+end-to-end: create → join → chat → Convert (T011), pinned staking deployment
+(T012), and SetStakingContract → TokenWeight → stake/delegate → funded Transfer
+approval with a real payout (T013).
 
 ## Architecture reminder
 
@@ -88,7 +89,25 @@ default product path.
 - Indexer delay: show "indexing" rather than inventing messages.
 - Chat is public; never type a secret into the composer.
 
-## 6. Local test commands
+## 6. Governance verification (T013)
+
+`pnpm verify:demo` re-derives every governance claim from finalized chain state
+and fails unless all of these hold:
+
+- GroupVault `get_group(group_id).dao_id` equals the evidence DAO
+- DAO `get_policy().default_vote_policy.weight_kind` is `TokenWeight`
+- DAO `get_staking_contract()` is set, and the staking contract's raw `STATE`
+  blob names that DAO as owner and the join FT as its vote token
+- DAO `delegation_balance_of(A)` is greater than zero
+- the recorded Transfer proposal is `Approved`
+- the DAO's balance fell by at least the transfer amount, and the receiver's
+  balance rose
+
+Paid join alone never produces weight: only the staking storage deposit, empty
+`msg` FT transfer and `delegate` call create it. A member with zero delegation
+must be rejected locally before any wallet approval.
+
+## 7. Local test commands
 
 ```bash
 pnpm lint
@@ -98,7 +117,7 @@ pnpm build
 bash scripts/test-contracts.sh
 ```
 
-## 7. Unattended e2e (T011)
+## 8. Unattended e2e (T011)
 
 ```bash
 cd /Users/echo/project/groupvault

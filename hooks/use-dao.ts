@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { getConnectedAccountId } from "@/lib/near/selector"
 import { subscribeDemoKeypair } from "@/lib/near/keypair-session"
 
@@ -47,12 +47,22 @@ export function useDao(daoId: string): DaoContext {
     }
   }, [session])
 
-  const sputnik = session
-    ? createSputnikClient(session.selector, new NearRpc(getNearConfig()))
-    : null
-  const staking = session
-    ? createStakingClient(session.selector, new NearRpc(getNearConfig()))
-    : null
+  // Memoized so `refresh` keeps a stable identity; otherwise every render
+  // re-runs the DAO reads and can exhaust the public RPC rate limit.
+  const sputnik = useMemo(
+    () =>
+      session
+        ? createSputnikClient(session.selector, new NearRpc(getNearConfig()))
+        : null,
+    [session],
+  )
+  const staking = useMemo(
+    () =>
+      session
+        ? createStakingClient(session.selector, new NearRpc(getNearConfig()))
+        : null,
+    [session],
+  )
 
   const refresh = useCallback(async () => {
     if (!sputnik) return

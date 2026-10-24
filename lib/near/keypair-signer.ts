@@ -99,6 +99,37 @@ export function clearDemoAccountCache(): void {
   cached = null
 }
 
+/**
+ * Run a signed transaction, retrying only on access-key nonce collisions.
+ *
+ * near-api-js caches the access-key nonce on the Account instance; after a
+ * failed or concurrently-confirmed transaction the cached value can be reused
+ * and the node rejects it with "must be larger than nonce". Dropping the cache
+ * makes the next attempt re-read the nonce from chain.
+ */
+async function withNonceRetry<T>(run: () => Promise<T>): Promise<T> {
+  let lastError: unknown
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    try {
+      const result = await run()
+      // `Account` never advances its cached access-key nonce after a successful
+      // transaction, so a second call on the same instance reuses the nonce and
+      // is rejected. Drop it so the next call re-reads from chain.
+      clearDemoAccountCache()
+      return result
+    } catch (reason) {
+      lastError = reason
+      if (!/nonce/i.test(String(reason))) throw reason
+      // Drop the cached Account AND build a new connection next attempt: the
+      // SDK's internal backoff retries with the same instance, whose access-key
+      // cache can still hold the nonce that the node just rejected.
+      clearDemoAccountCache()
+      await new Promise((resolve) => setTimeout(resolve, 800 * (attempt + 1)))
+    }
+  }
+  throw lastError
+}
+
 export function parseFinalExecutionOutcome(
   outcome: ExecutionOutcomeLike,
 ): SignedReceipt {
@@ -143,13 +174,15 @@ export async function signAndSendWithKeypair(
     )
   }
 
-  const account = await getDemoAccount(session)
-  const outcome = (await account.functionCall({
-    contractId: input.receiverId,
-    methodName: input.methodName,
-    args: input.args ?? {},
-    gas: BigInt(input.gas),
-    attachedDeposit: BigInt(input.deposit ?? "0"),
+  const outcome = (await withNonceRetry(async () => {
+    const account = await getDemoAccount(session)
+    return account.functionCall({
+      contractId: input.receiverId,
+      methodName: input.methodName,
+      args: input.args ?? {},
+      gas: BigInt(input.gas),
+      attachedDeposit: BigInt(input.deposit ?? "0"),
+    })
   })) as ExecutionOutcomeLike
   return parseFinalExecutionOutcome(outcome)
 }
@@ -168,10 +201,9 @@ export async function transferWithKeypair(
       `Demo keypair is connected as ${session.accountId}, not ${signerId}`,
     )
   }
-  const account = await getDemoAccount(session)
-  const outcome = (await account.sendMoney(
-    receiverId,
-    BigInt(amount),
-  )) as ExecutionOutcomeLike
+  const outcome = (await withNonceRetry(async () => {
+    const account = await getDemoAccount(session)
+    return account.sendMoney(receiverId, BigInt(amount))
+  })) as ExecutionOutcomeLike
   return parseFinalExecutionOutcome(outcome)
 }

@@ -173,6 +173,16 @@ export async function connectDemoKeypair(
   const credentials = loadDemoCredential(who)
   await injectDemoKeypair(page, credentials)
 
+  // Keep the sessionStorage copy current, then reuse an already-connected
+  // account instead of requiring the Connect button to exist.
+  await page.evaluate((creds) => {
+    window.sessionStorage.setItem("gv.demo.keypair", JSON.stringify(creds))
+  }, credentials)
+
+  if (await isAccountChipVisible(page, credentials.accountId)) {
+    return
+  }
+
   await page.getByRole("button", { name: /connect/i }).first().click()
   // Prefer UI path so sessionStorage is also set for the tab.
   const keypairButton = page.getByRole("button", { name: /Keypair \(demo\)/i })

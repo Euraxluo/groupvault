@@ -9,11 +9,39 @@
   "transfer_amount": "1000000000000000000000000",
   "group_id": 13,
   "create_tx": "8PVskrCbShWAfzjPTkbWz4o4eCrZK4yofmyCwJxqZ2k5",
-  "recorded_at": "2026-10-24T15:22:54.984Z",
+  "recorded_at": "2026-10-24T17:19:57.779Z",
   "join_tx": "5US1FF1hYuV31nMDEJha3vdrDYDZmap7THe8DZvnz75R",
   "message_receipt_ids": [
     "5N9aenFotaA9pkzcoyUyhDogGZEhMhgkjePTno5Lgmsu"
   ],
   "convert_tx": "HcYpgB89B7GerhCHkRTYNyXqpxiav7owbPwAqby3Vp93",
-  "dao_id": "groupvault-13.sputnikv2.testnet"
+  "dao_id": "groupvault-13.sputnikv2.testnet",
+  "set_staking_proposal_id": 1,
+  "set_staking_tx": "(proposal 1 created in earlier attempt; see get_proposal(1))",
+  "staking_contract_id": "sputnikstaking.gv-deployer-1024-204559.testnet",
+  "set_staking_approve_b_tx": "7y4kbqcZsffrhBAj3zAatNhhcqeRvGEwrFCC96fRt2yc",
+  "tokenweight_proposal_id": 2,
+  "tokenweight_approve_b_tx": "CGX5Jjs7nwCAhxZcbLGcJVTaLsUPx2SoVqCDr34o5j2Z",
+  "tokenweight_policy_tx": "already-applied",
+  "delegation_before": "0",
+  "delegation": "2000000",
+  "stake_tx": "8mZ5BQTEASfqdSoxcnJCGX6pQ2Eugn1pSXcqjAAwfREL",
+  "delegate_tx": "AXfbyoQfktodrXG5a9PDKVWbY7hAJaEH5iZW9AZCeTAe",
+  "dao_fund_tx": "B3Uhfdc8a4akTgVR5Q2k7MvehknLvrwDzUUVp66RL9ub",
+  "transfer_proposal_id": 3,
+  "proposal_id": 3,
+  "proposal_status_after_approve": "Approved",
+  "receiver_balance_before": "342673774963561765339998",
+  "receiver_balance_after": "1342673774963561765339998",
+  "tokenweight_policy": "TokenWeight",
+  "tokenweight_threshold": [
+    1,
+    2
+  ],
+  "staking_owner": "groupvault-13.sputnikv2.testnet",
+  "staking_token": "gv-deployer-1024-204559-ft.testnet",
+  "zero_weight_account": "gv-b-1024-210252.testnet",
+  "zero_weight_delegation": "0",
+  "dao_balance_before": "14000000000000000000000000",
+  "dao_balance_after": "13000000000000000000000000"
 }

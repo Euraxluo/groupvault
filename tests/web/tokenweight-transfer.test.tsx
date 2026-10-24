@@ -96,7 +96,7 @@ describe("TokenWeight approval gate", () => {
         client: {
           getPolicy,
           getStakingContract,
-          getLastProposalId: vi.fn(),
+          getNewestProposalId: vi.fn(),
           actProposal,
           addProposal: vi.fn(),
           getProposal: vi.fn(),
@@ -124,7 +124,7 @@ describe("TokenWeight approval gate", () => {
         getPolicy,
         getStakingContract,
         actProposal,
-        getLastProposalId: vi.fn(),
+        getNewestProposalId: vi.fn(),
         addProposal: vi.fn(),
         getProposal: vi.fn(),
       },

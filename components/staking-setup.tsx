@@ -9,7 +9,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useDao } from "@/hooks/use-dao"
+import { useNearSession } from "@/hooks/use-near-session"
 import { getNearConfig } from "@/lib/near/config"
+import { getConnectedAccountId } from "@/lib/near/selector"
 import {
   setStakingContractKind,
   tokenWeightPolicyUpdate,
@@ -20,6 +22,7 @@ type Step = "staking" | "tokenweight" | "deposit" | "transfer" | "delegate" | nu
 
 export function StakingSetup({ daoId }: { daoId: string }) {
   const dao = useDao(daoId)
+  const session = useNearSession()
   const config = getNearConfig()
   const [stakingId, setStakingId] = useState("")
   const [stakeAmount, setStakeAmount] = useState("")
@@ -40,19 +43,26 @@ export function StakingSetup({ daoId }: { daoId: string }) {
   }
 
   const requireCouncilWallet = () => {
-    if (!dao.accountId || !dao.sputnik || !dao.policy) {
+    // Read the live session at click time: the hook's copy can lag a demo
+    // keypair connect, which would otherwise reject a connected council wallet.
+    const accountId =
+      (session ? getConnectedAccountId(session.selector) : null) ?? dao.accountId
+    if (!accountId || !dao.sputnik) {
       throw new Error("Connect a council wallet first")
     }
-    return dao.accountId
+    return accountId
   }
 
   const propose = async (kind: Record<string, unknown>, description: string) => {
     const accountId = requireCouncilWallet()
+    // The policy can still be loading when the first proposal is submitted;
+    // read it directly instead of requiring the hook snapshot to be populated.
+    const policy = dao.policy ?? (await dao.sputnik!.getPolicy(daoId))
     await dao.sputnik!.addProposal(
       accountId,
       daoId,
       { description, kind },
-      dao.policy!.proposal_bond,
+      policy.proposal_bond,
     )
   }
 

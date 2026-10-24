@@ -95,7 +95,12 @@ export function transferKind(input: {
 export interface SputnikClient {
   getPolicy(daoId: string): Promise<Policy>
   getProposal(daoId: string, id: number): Promise<Proposal>
-  getLastProposalId(daoId: string): Promise<number>
+  /**
+   * Sputnik ids start at 0 and `get_last_proposal_id` returns the *next*
+   * counter, so the newest existing proposal is this value minus one.
+   * Returns -1 when the DAO has no proposals yet.
+   */
+  getNewestProposalId(daoId: string): Promise<number>
   getStakingContract(daoId: string): Promise<string | null>
   addProposal(
     signerId: string,
@@ -122,11 +127,11 @@ export function createSputnikClient(selector: WalletSelector, rpc: NearRpc): Spu
         methodName: "get_proposal",
         args: { id },
       }),
-    getLastProposalId: (daoId) =>
+    getNewestProposalId: (daoId) =>
       rpc.view<number>({
         contractId: daoId,
         methodName: "get_last_proposal_id",
-      }),
+      }).then((next) => Number(next) - 1),
     getStakingContract: (daoId) =>
       rpc.view<string | null>({
         contractId: daoId,

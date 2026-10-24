@@ -28,17 +28,25 @@ export function recordSentTransactions(page: Page): SentTransaction[] {
             hash?: string
             signer_id?: string
             receiver_id?: string
-            actions?: { FunctionCall?: { method_name?: string } }[]
+            actions?: {
+              FunctionCall?: { method_name?: string }
+              Transfer?: unknown
+            }[]
           }
         }
       }
       const tx = body.result?.transaction
       if (!tx?.hash || !tx.signer_id) return
+      const first = tx.actions?.[0]
       sent.push({
         hash: tx.hash,
         signerId: tx.signer_id,
         receiverId: tx.receiver_id ?? "",
-        methodName: tx.actions?.[0]?.FunctionCall?.method_name ?? "",
+        // Native transfers have no method name; label them so tests can wait
+        // for them without mistaking them for FunctionCall transactions.
+        methodName:
+          first?.FunctionCall?.method_name ??
+          (first?.Transfer !== undefined ? "Transfer" : ""),
         receiptIds: (body.result?.receipts_outcome ?? [])
           .map((receipt) => receipt.id)
           .filter((id): id is string => typeof id === "string" && id.length > 0),
