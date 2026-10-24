@@ -54,7 +54,7 @@ export class NearRpc {
 
   async view<T>({ contractId, methodName, args = {} }: ViewCallOptions): Promise<T> {
     return this.call<T>("query", {
-      request_type: "call",
+      request_type: "call_function",
       finality: "final",
       account_id: contractId,
       method_name: methodName,

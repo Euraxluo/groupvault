@@ -263,7 +263,7 @@ describe("NearRpc", () => {
     expect(value).toEqual({ ok: true })
     expect(payload.length).toBeGreaterThan(0)
     const body = JSON.parse(fetcher.mock.calls[0][1].body)
-    expect(body.params.request_type).toBe("call")
+    expect(body.params.request_type).toBe("call_function")
     expect(body.params.finality).toBe("final")
     expect(
       Buffer.from(body.params.args_base64, "base64").toString("utf8"),

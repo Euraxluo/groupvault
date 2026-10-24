@@ -17,6 +17,8 @@
 /playwright-report/
 /test-results/
 /indexer/data/
+/artifacts/wasm/
+.env.local
 *.sqlite
 *.sqlite-shm
 *.sqlite-wal

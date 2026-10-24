@@ -1,0 +1,15 @@
+{
+  "network": "testnet",
+  "deployer_account_id": "gv-deployer-1024-204559.testnet",
+  "factory_id": "sputnikv2.testnet",
+  "deployments": {
+    "groupvault": "6bWzytJJirFkpwcdxfiKQmKQuVMtM13cg6WpcXkwAtbg",
+    "join_ft": "Dhr6sm5JLKTY9PhCWBngKgUBQzGnGPAnWhUYkmcB6PCj"
+  },
+  "groupvault_account_id": "gv-deployer-1024-204559-groupvault.testnet",
+  "groupvault_wasm_sha256": "4d245f2dff9fc094f94e0908d6f3ac88c917fdabda4a04c966b453ce3b85d5d8",
+  "deployed_at": "2026-10-24T12:53:43.300Z",
+  "join_ft_account_id": "gv-deployer-1024-204559-ft.testnet",
+  "join_ft_wasm_sha256": "02726bbe4c44258207cb6b1578b3d7afa73f78d7884fd2b8bca032421c279059",
+  "join_ft_decimals": 6
+}
