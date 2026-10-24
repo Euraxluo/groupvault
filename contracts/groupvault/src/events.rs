@@ -56,3 +56,46 @@ pub fn join_fees_withdraw_failed(group_id: u64, amount: u128) {
         }),
     );
 }
+
+pub fn message(group_id: u64, sender: &near_sdk::AccountId, text: &str, ts: u64) {
+    emit(
+        "message",
+        json!({
+            "group_id": group_id,
+            "sender": sender,
+            "text": text,
+            "ts": ts.to_string(),
+        }),
+    );
+}
+
+pub fn convert_started(group_id: u64, dao_name: &str, member_count: usize) {
+    emit(
+        "convert_started",
+        json!({
+            "group_id": group_id,
+            "dao_name": dao_name,
+            "member_count": member_count,
+        }),
+    );
+}
+
+pub fn convert_done(group_id: u64, dao_id: &near_sdk::AccountId) {
+    emit(
+        "convert_done",
+        json!({
+            "group_id": group_id,
+            "dao_id": dao_id,
+        }),
+    );
+}
+
+pub fn convert_failed(group_id: u64, reason: &str) {
+    emit(
+        "convert_failed",
+        json!({
+            "group_id": group_id,
+            "reason": reason,
+        }),
+    );
+}

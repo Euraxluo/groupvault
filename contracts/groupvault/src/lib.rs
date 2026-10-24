@@ -1,4 +1,6 @@
+pub mod chat;
 pub mod events;
+pub mod factory;
 pub mod ft;
 pub mod state;
 pub mod views;
@@ -7,6 +9,10 @@ use near_sdk::json_types::U128;
 use near_sdk::store::{LookupMap, Vector};
 use near_sdk::{env, near, AccountId, NearToken, PanicOnDefault, Promise, PromiseResult};
 
+use crate::factory::{
+    build_factory_args, expected_dao_account, parse_factory_result, validate_dao_name,
+    CONVERT_DEPOSIT, GAS_FOR_CONVERT_CALLBACK, GAS_FOR_FACTORY_CALL,
+};
 use crate::ft::{ext_ft, JoinMessage, GAS_FOR_FT_TRANSFER, GAS_FOR_WITHDRAW_CALLBACK, ONE_YOCTO};
 use crate::state::{Group, PendingWithdrawal, StorageKey};
 use crate::views::{GroupView, MAX_MEMBERS};
@@ -138,6 +144,9 @@ impl Contract {
         if env::predecessor_account_id() != group.join_ft {
             return amount;
         }
+        if group.convert_pending {
+            return amount;
+        }
         if group.contains(&sender_id) || amount.0 < group.join_fee {
             return amount;
         }
@@ -214,6 +223,66 @@ impl Contract {
         }
     }
 
+    pub fn send_message(&self, group_id: u64, text: String) {
+        let sender = env::predecessor_account_id();
+        let group = self.group(group_id);
+        chat::emit_message(group, &sender, &text);
+    }
+
+    #[payable]
+    pub fn convert_to_dao(&mut self, group_id: u64, dao_name: String, purpose: String) {
+        let predecessor = env::predecessor_account_id();
+        validate_dao_name(&dao_name);
+
+        let group = self.group(group_id);
+        assert_eq!(predecessor, group.owner, "ERR_NOT_GROUP_OWNER");
+        assert!(!group.convert_pending, "ERR_CONVERT_PENDING");
+        assert!(group.dao_id.is_none(), "ERR_ALREADY_CONVERTED");
+        assert!(
+            env::attached_deposit() >= CONVERT_DEPOSIT,
+            "ERR_CONVERT_DEPOSIT"
+        );
+
+        let members = group.members.clone();
+        let factory_id = self.factory_id.clone();
+        let expected_dao = expected_dao_account(&dao_name, &factory_id);
+        let args = build_factory_args(&dao_name, &purpose, &members);
+        let member_count = members.len();
+
+        let group = self.groups.get_mut(&group_id).expect("ERR_GROUP_NOT_FOUND");
+        group.convert_pending = true;
+
+        events::convert_started(group_id, &dao_name, member_count);
+
+        factory::ext_sputnik_factory::ext(factory_id)
+            .with_static_gas(GAS_FOR_FACTORY_CALL)
+            .with_attached_deposit(CONVERT_DEPOSIT)
+            .create(dao_name, args)
+            .then(
+                Self::ext(env::current_account_id())
+                    .with_static_gas(GAS_FOR_CONVERT_CALLBACK)
+                    .on_convert_complete(group_id, expected_dao),
+            );
+    }
+
+    #[private]
+    pub fn on_convert_complete(&mut self, group_id: u64, expected_dao: AccountId) {
+        let created = match env::promise_result(0) {
+            PromiseResult::Successful(payload) => parse_factory_result(&payload).unwrap_or(false),
+            PromiseResult::Failed => false,
+        };
+
+        let group = self.groups.get_mut(&group_id).expect("ERR_GROUP_NOT_FOUND");
+        group.convert_pending = false;
+
+        if created {
+            group.dao_id = Some(expected_dao.clone());
+            events::convert_done(group_id, &expected_dao);
+        } else {
+            events::convert_failed(group_id, "factory_false_or_failed");
+        }
+    }
+
     fn group(&self, group_id: u64) -> &Group {
         self.groups.get(&group_id).expect("ERR_GROUP_NOT_FOUND")
     }
@@ -222,6 +291,8 @@ impl Contract {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use near_sdk::test_utils::VMContextBuilder;
+    use near_sdk::testing_env;
 
     #[test]
     fn normalize_members_puts_owner_first_once() {
@@ -249,5 +320,52 @@ mod tests {
             .map(|index| format!("member{index}.testnet").parse().unwrap())
             .collect();
         assert_eq!(state::normalize_members(owner, members).len(), 61);
+    }
+
+    fn contract_with_pending_group() -> (Contract, AccountId) {
+        let ft: AccountId = "ft.testnet".parse().unwrap();
+        let owner: AccountId = "owner.testnet".parse().unwrap();
+        let group = Group {
+            id: 0,
+            owner: owner.clone(),
+            name: "Pending".to_string(),
+            description: String::new(),
+            join_fee: 1_000_000,
+            join_ft: ft.clone(),
+            members: vec![owner.clone()],
+            dao_id: None,
+            convert_pending: true,
+            created_at: 1,
+            join_fee_balance: 0,
+        };
+        let mut groups = LookupMap::new(StorageKey::Groups);
+        groups.insert(0, group);
+        let mut group_ids = Vector::new(StorageKey::GroupIds);
+        group_ids.push(0);
+        let contract = Contract {
+            owner,
+            factory_id: "factory.testnet".parse().unwrap(),
+            groups,
+            group_ids,
+            pending_withdrawals: LookupMap::new(StorageKey::PendingWithdrawals),
+            next_group_id: 1,
+        };
+        (contract, ft)
+    }
+
+    #[test]
+    fn join_is_fully_refunded_while_convert_pending() {
+        let (mut contract, ft) = contract_with_pending_group();
+        let joiner: AccountId = "joiner.testnet".parse().unwrap();
+        testing_env!(VMContextBuilder::new().predecessor_account_id(ft).build());
+
+        let unused = contract.ft_on_transfer(
+            joiner.clone(),
+            U128(1_000_000),
+            r#"{"action":"join","group_id":0}"#.to_string(),
+        );
+        assert_eq!(unused.0, 1_000_000);
+        assert!(!contract.get_members(0).contains(&joiner));
+        assert_eq!(contract.get_group(0).member_count, 1);
     }
 }

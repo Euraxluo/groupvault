@@ -10,6 +10,8 @@ use std::process::Command;
 
 pub const DEFAULT_WASM: &str = "../target/wasm32-unknown-unknown/release/groupvault_contract.wasm";
 pub const TOKEN_WASM: &str = "../target/wasm32-unknown-unknown/release/groupvault_test_token.wasm";
+pub const FACTORY_WASM: &str =
+    "../target/wasm32-unknown-unknown/release/groupvault_test_factory.wasm";
 
 pub fn wasm_bytes() -> Vec<u8> {
     read_or_build(std::env::var("GROUPVAULT_WASM").unwrap_or_else(|_| DEFAULT_WASM.to_string()))
@@ -17,6 +19,12 @@ pub fn wasm_bytes() -> Vec<u8> {
 
 pub fn token_wasm_bytes() -> Vec<u8> {
     read_or_build(std::env::var("GROUPVAULT_TOKEN_WASM").unwrap_or_else(|_| TOKEN_WASM.to_string()))
+}
+
+pub fn factory_wasm_bytes() -> Vec<u8> {
+    read_or_build(
+        std::env::var("GROUPVAULT_FACTORY_WASM").unwrap_or_else(|_| FACTORY_WASM.to_string()),
+    )
 }
 
 fn read_or_build(path: String) -> Vec<u8> {
@@ -30,6 +38,8 @@ fn read_or_build(path: String) -> Vec<u8> {
                 "groupvault-contract",
                 "--package",
                 "groupvault-test-token",
+                "--package",
+                "groupvault-test-factory",
                 "--target",
                 "wasm32-unknown-unknown",
                 "--release",
@@ -93,6 +103,10 @@ pub async fn register(token: &Contract, signer: &Account, account_id: &near_work
 }
 
 pub async fn deploy(worker: &Worker<Sandbox>) -> Contract {
+    deploy_with_factory(worker, "sputnikv2.testnet").await
+}
+
+pub async fn deploy_with_factory(worker: &Worker<Sandbox>, factory_id: &str) -> Contract {
     let contract = worker
         .dev_deploy(&wasm_bytes())
         .await
@@ -101,7 +115,7 @@ pub async fn deploy(worker: &Worker<Sandbox>) -> Contract {
         .call("new")
         .args_json(json!({
             "owner": worker.root_account().expect("root").id(),
-            "factory_id": "sputnikv2.testnet",
+            "factory_id": factory_id,
         }))
         .transact()
         .await
@@ -109,6 +123,17 @@ pub async fn deploy(worker: &Worker<Sandbox>) -> Contract {
         .into_result()
         .expect("init result");
     contract
+}
+
+pub async fn deploy_factory(worker: &Worker<Sandbox>, mode: &str) -> anyhow::Result<Contract> {
+    let contract = worker.dev_deploy(&factory_wasm_bytes()).await?;
+    contract
+        .call("new")
+        .args_json(json!({ "mode": mode }))
+        .transact()
+        .await?
+        .into_result()?;
+    Ok(contract)
 }
 
 pub async fn create_group(

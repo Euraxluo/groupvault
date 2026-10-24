@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["groupvault", "test-token"]
+members = ["groupvault", "test-token", "test-factory"]
 
 [workspace.package]
 version = "0.1.0"
