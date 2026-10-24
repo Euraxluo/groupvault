@@ -60,6 +60,18 @@ export function tokenWeightPolicyUpdate() {
   }
 }
 
+export function roleWeightPolicyUpdate() {
+  return {
+    ChangePolicyUpdateDefaultVotePolicy: {
+      vote_policy: {
+        weight_kind: "RoleWeight",
+        quorum: "0",
+        threshold: [1, 2],
+      },
+    },
+  }
+}
+
 export function setStakingContractKind(stakingId: string) {
   return { SetStakingContract: { staking_id: stakingId } }
 }
