@@ -1,227 +1,134 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Card, CardContent, CardHeader } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
+import { useEffect, useState } from "react"
+import { ArrowRight, MessageSquareText, ShieldCheck, Users } from "lucide-react"
+import Link from "next/link"
+
 import { Badge } from "@/components/ui/badge"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { GroupDetailsDialog } from "@/components/group-details-dialog"
-import { motion } from "framer-motion"
-import { ArrowRight, TrendingUp, Clock, Users, Plus } from "lucide-react"
-import { CreateGroupDialog } from "@/components/create-group-dialog"
-import { QuickActions } from "@/components/quick-actions"
-import { QuickTemplates } from "@/components/quick-templates"
-import { RecurringPayments } from "@/components/recurring-payments"
-import { getActiveAccount, fetchRealBalances, getProposals } from "@/lib/onchain-store"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { getNearConfig } from "@/lib/near/config"
+import { createGroupVaultClient, type GroupView } from "@/lib/near/groupvault"
+import { NearRpc } from "@/lib/near/rpc"
+import { useNearSession } from "@/hooks/use-near-session"
 
-const DEFAULT_GROUPS = [
-  {
-    id: "group-1",
-    name: "Team Treasury (Sui MultiSig)",
-    network: "Sui Testnet (v3)",
-    orgObjectId: "0xaf0806fadf61ceeb76c21b40af4393e244a5d8ca91ba208d4f58537421eff2e4",
-    members: [
-      { name: "Agent-Alice (理事长)", address: "0xaf0806fadf61ceeb76c21b40af4393e244a5d8ca91ba208d4f58537421eff2e4", weight: 2 },
-      { name: "Agent-Bob (审计员)", address: "0x83fb785f1da119aea4e0faa19d1466b33899e14ea730af6425ec7d5557cb5a36", weight: 1 },
-      { name: "Agent-Carol (执行官)", address: "0x5e6f8a9b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f", weight: 1 },
-    ],
-    threshold: 2,
-    totalWeight: 4,
-    createdAt: new Date().toISOString(),
-  },
-]
-
-export default function Dashboard() {
-  const [selectedGroup, setSelectedGroup] = useState<{ id: string; name: string } | null>(null)
-  const [isCreateGroupOpen, setIsCreateGroupOpen] = useState(false)
-  const [userGroups, setUserGroups] = useState<any[]>(DEFAULT_GROUPS)
-  const [totalAssetsUsd, setTotalAssetsUsd] = useState<number>(0)
-  const [pendingCount, setPendingCount] = useState<number>(0)
+export function Dashboard() {
+  const session = useNearSession()
+  const [groups, setGroups] = useState<GroupView[]>([])
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    let cancelled = false
-
-    const loadData = async () => {
-      // 1. 读取群组列表
-      try {
-        const saved = JSON.parse(localStorage.getItem("user_groups") || "[]")
-        if (!cancelled) {
-          if (Array.isArray(saved) && saved.length > 0) {
-            setUserGroups(saved)
-          } else {
-            setUserGroups(DEFAULT_GROUPS)
-            localStorage.setItem("user_groups", JSON.stringify(DEFAULT_GROUPS))
-          }
-        }
-      } catch {}
-
-      // 2. 读取待处理提案数
-      try {
-        const props = getProposals()
-        const pending = props.filter((p) => p.status === "pending").length
-        if (!cancelled) setPendingCount(pending)
-      } catch {}
-
-      // 3. 从 Sui 真实全节点 RPC 读取活跃钱包链上资产
-      const account = getActiveAccount()
-      if (account?.address) {
-        try {
-          const balances = await fetchRealBalances(account.address)
-          if (!cancelled) {
-            setTotalAssetsUsd(balances.totalUsdValue)
-          }
-        } catch (e) {
-          console.warn("[Dashboard] fetchRealBalances failed:", e)
-        }
-      } else {
-        if (!cancelled) setTotalAssetsUsd(0)
-      }
+    if (!session) return
+    const config = getNearConfig()
+    if (!config.groupVaultContractId) {
+      setError("Contract not configured yet. This build shows no invented groups.")
+      return
     }
-
-    loadData()
-
-    const onStorage = () => loadData()
-    const onProposalsUpdated = () => loadData()
-    window.addEventListener("storage", onStorage)
-    window.addEventListener("sui-proposals-updated", onProposalsUpdated)
-    window.addEventListener("sui-groups-updated", onStorage)
-    window.addEventListener("sui-account-switched", onStorage)
-    const id = window.setInterval(loadData, 4000)
-
-    return () => {
-      cancelled = true
-      window.removeEventListener("storage", onStorage)
-      window.removeEventListener("sui-proposals-updated", onProposalsUpdated)
-      window.removeEventListener("sui-groups-updated", onStorage)
-      window.removeEventListener("sui-account-switched", onStorage)
-      window.clearInterval(id)
-    }
-  }, [])
-
-  // 群组列表只来自用户真实创建的数据，不再展示 demo 假数据
-
-
-  const container = {
-    hidden: { opacity: 0 },
-    show: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1,
-      },
-    },
-  }
-
-  const item = {
-    hidden: { opacity: 0, y: 20 },
-    show: { opacity: 1, y: 0 },
-  }
+    const client = createGroupVaultClient(
+      session.selector,
+      new NearRpc(config),
+      config.groupVaultContractId,
+    )
+    client
+      .getGroups(0, 20)
+      .then(setGroups)
+      .catch((reason: unknown) =>
+        setError(reason instanceof Error ? reason.message : String(reason)),
+      )
+  }, [session])
 
   return (
     <div className="space-y-4">
-      {/* Quick Actions, Templates, and Recurring Payments Section */}
-      <div className="space-y-4">
-        <QuickActions />
-        <QuickTemplates />
-        <RecurringPayments />
-      </div>
-
-      <div className="flex items-center justify-between mb-2">
-        <h2 className="text-xl font-bold">Your Groups</h2>
-        <Button
-          variant="default"
-          size="sm"
-          className="bg-gradient-to-r from-primary to-purple-500 hover:from-primary/90 hover:to-purple-500/90"
-          onClick={() => setIsCreateGroupOpen(true)}
-        >
-          <Plus className="h-4 w-4 mr-1" /> New Group
+      <div className="flex items-end justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Your groups</h1>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Discovery reads the bounded on-chain group list.
+          </p>
+        </div>
+        <Button asChild size="sm" className="rounded-full">
+          <Link href="/groups/new">
+            New group
+            <ArrowRight className="ml-1 h-3.5 w-3.5" />
+          </Link>
         </Button>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 mb-4">
-        <Card className="bg-gradient-to-br from-primary/10 to-purple-500/10 border-none shadow-sm">
-          <CardContent className="p-3 flex flex-col items-center justify-center">
-            <TrendingUp className="h-8 w-8 text-primary mb-1" />
-            <p className="text-lg font-bold">
-              ${totalAssetsUsd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </p>
-            <p className="text-xs text-muted-foreground">Total Assets (RPC)</p>
+      <div className="grid grid-cols-2 gap-3">
+        <Card className="border-none bg-primary/5 shadow-none">
+          <CardContent className="flex items-center gap-3 p-4">
+            <Users className="h-6 w-6 text-primary" />
+            <div>
+              <p className="text-lg font-bold">{groups.length}</p>
+              <p className="text-[11px] text-muted-foreground">Known groups</p>
+            </div>
           </CardContent>
         </Card>
-        <Card className="bg-gradient-to-br from-amber-500/10 to-orange-500/10 border-none shadow-sm">
-          <CardContent className="p-3 flex flex-col items-center justify-center">
-            <Clock className="h-8 w-8 text-amber-500 mb-1" />
-            <p className="text-lg font-bold">{pendingCount}</p>
-            <p className="text-xs text-muted-foreground">Pending Transactions</p>
+        <Card className="border-none bg-emerald-500/5 shadow-none">
+          <CardContent className="flex items-center gap-3 p-4">
+            <ShieldCheck className="h-6 w-6 text-emerald-600" />
+            <div>
+              <p className="text-lg font-bold">Wallet</p>
+              <p className="text-[11px] text-muted-foreground">Only signer</p>
+            </div>
           </CardContent>
         </Card>
       </div>
 
-      <motion.div className="grid gap-3" variants={container} initial="hidden" animate="show">
-        {userGroups.map((g: any) => ({
-            id: g.id,
-            name: g.name,
-            network: g.network || "Sui",
-            members: g.members?.length ?? 0,
-            threshold: g.threshold || 1,
-            color: "from-primary to-purple-500",
-          }
-          )).map((group: any) => (
-          <motion.div key={group.id} variants={item}>
-            <Card
-              className="overflow-hidden hover:shadow-md transition-all duration-300 border-none shadow-sm"
-              onClick={() => setSelectedGroup({ id: group.id, name: group.name })}
-            >
-              <div className={`h-1 bg-gradient-to-r ${group.color}`}></div>
-              <CardHeader className="p-3 pb-0">
-                <div className="flex items-start justify-between">
+      {error ? (
+        <p className="rounded-xl border border-dashed p-4 text-xs text-muted-foreground">
+          {error}
+        </p>
+      ) : null}
+
+      {!error && groups.length === 0 ? (
+        <Card className="border-dashed shadow-none">
+          <CardHeader>
+            <CardTitle className="text-base">No groups yet</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm text-muted-foreground">
+            <p>Create the first paid group, then invite a second wallet to join.</p>
+            <Button asChild variant="outline" size="sm">
+              <Link href="/groups/new">Create a group</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      <div className="grid gap-3">
+        {groups.map((group) => (
+          <Link key={group.id} href={`/groups/${group.id}`}>
+            <Card className="transition-shadow hover:shadow-md">
+              <CardHeader className="p-4 pb-1">
+                <div className="flex items-start justify-between gap-3">
                   <div>
-                    <h3 className="font-medium text-sm">{group.name}</h3>
-                    <p className="text-xs text-muted-foreground">{group.network} Network</p>
+                    <CardTitle className="text-sm">{group.name}</CardTitle>
+                    <p className="mt-0.5 text-[11px] text-muted-foreground">
+                      {group.member_count} members · {group.join_fee} base units
+                    </p>
                   </div>
+                  <Badge variant={group.dao_id ? "default" : "secondary"}>
+                    {group.convert_pending
+                      ? "Converting"
+                      : group.dao_id
+                        ? "DAO"
+                        : "Group"}
+                  </Badge>
                 </div>
               </CardHeader>
-              <CardContent className="p-3">
-                <div className="flex items-center justify-between mb-1.5">
-                  <div className="text-xs text-muted-foreground flex items-center">
-                    <Users className="h-3 w-3 mr-1" />
-                    {group.members} Members
-                  </div>
-                  <div className="font-medium text-sm">
-                    Threshold {group.threshold}
-                  </div>
-                </div>
-                <div className="mt-3 flex items-center justify-between">
-                  <div className="flex -space-x-2">
-                    {Array.from({ length: Math.min(group.members, 3) }).map((_, i) => (
-                      <Avatar key={`member-${i}`} className="border-2 border-background h-6 w-6">
-                        <AvatarFallback className="text-xs bg-gradient-to-br from-primary/80 to-purple-500/80 text-white">
-                          {String.fromCharCode(65 + i)}
-                        </AvatarFallback>
-                      </Avatar>
-                    ))}
-                    {group.members > 3 && (
-                      <Avatar className="border-2 border-background h-6 w-6">
-                        <AvatarFallback className="text-xs bg-muted">+{group.members - 3}</AvatarFallback>
-                      </Avatar>
-                    )}
-                  </div>
-                  <Button size="sm" variant="ghost" className="h-7 text-xs text-primary flex items-center gap-1">
-                    View Details <ArrowRight className="h-3 w-3" />
-                  </Button>
-                </div>
+              <CardContent className="flex items-center justify-between p-4 pt-2 text-xs text-muted-foreground">
+                <span className="flex items-center gap-1">
+                  <MessageSquareText className="h-3.5 w-3.5" />
+                  Public chat logs
+                </span>
+                <span className="flex items-center gap-1 text-primary">
+                  Open <ArrowRight className="h-3 w-3" />
+                </span>
               </CardContent>
             </Card>
-          </motion.div>
+          </Link>
         ))}
-      </motion.div>
-
-      <GroupDetailsDialog
-        open={!!selectedGroup}
-        onOpenChange={() => setSelectedGroup(null)}
-        groupId={selectedGroup?.id || ""}
-      />
-
-      <CreateGroupDialog open={isCreateGroupOpen} onOpenChange={setIsCreateGroupOpen} />
+      </div>
     </div>
   )
 }

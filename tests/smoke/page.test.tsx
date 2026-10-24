@@ -10,9 +10,8 @@ describe("GroupVault landing shell", () => {
     expect(
       screen.getByRole("heading", { level: 1, name: /A group chat with a treasury/i }),
     ).toBeInTheDocument()
-    expect(
-      screen.getByText(/No invented groups, balances, or messages/i),
-    ).toBeInTheDocument()
+    expect(screen.getByText(/No backend signing/i)).toBeInTheDocument()
+    expect(screen.getByText(/Public logs, no E2E claim/i)).toBeInTheDocument()
     expect(screen.queryByText(/Team Treasury \(Sui MultiSig\)/i)).not.toBeInTheDocument()
   })
 })
