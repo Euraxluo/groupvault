@@ -1,12 +1,14 @@
 pub mod events;
+pub mod ft;
 pub mod state;
 pub mod views;
 
 use near_sdk::json_types::U128;
 use near_sdk::store::{LookupMap, Vector};
-use near_sdk::{env, near, AccountId, NearToken, PanicOnDefault, Promise};
+use near_sdk::{env, near, AccountId, NearToken, PanicOnDefault, Promise, PromiseResult};
 
-use crate::state::{Group, StorageKey};
+use crate::ft::{ext_ft, JoinMessage, GAS_FOR_FT_TRANSFER, GAS_FOR_WITHDRAW_CALLBACK, ONE_YOCTO};
+use crate::state::{Group, PendingWithdrawal, StorageKey};
 use crate::views::{GroupView, MAX_MEMBERS};
 
 #[near(contract_state)]
@@ -16,6 +18,7 @@ pub struct Contract {
     factory_id: AccountId,
     groups: LookupMap<u64, Group>,
     group_ids: Vector<u64>,
+    pending_withdrawals: LookupMap<u64, PendingWithdrawal>,
     next_group_id: u64,
 }
 
@@ -28,6 +31,7 @@ impl Contract {
             factory_id,
             groups: LookupMap::new(StorageKey::Groups),
             group_ids: Vector::new(StorageKey::GroupIds),
+            pending_withdrawals: LookupMap::new(StorageKey::PendingWithdrawals),
             next_group_id: 0,
         }
     }
@@ -119,6 +123,95 @@ impl Contract {
 
     pub fn get_join_fee_balance(&self, group_id: u64) -> U128 {
         self.group(group_id).join_fee_balance.into()
+    }
+
+    /// NEP-141 receiver callback. Every rejection returns the full amount so
+    /// the FT contract refunds the sender; none of these paths panic.
+    pub fn ft_on_transfer(&mut self, sender_id: AccountId, amount: U128, msg: String) -> U128 {
+        let Some(message) = JoinMessage::parse(&msg) else {
+            return amount;
+        };
+        let Some(group) = self.groups.get(&message.group_id) else {
+            return amount;
+        };
+
+        if env::predecessor_account_id() != group.join_ft {
+            return amount;
+        }
+        if group.contains(&sender_id) || amount.0 < group.join_fee {
+            return amount;
+        }
+
+        let Some(group) = self.groups.get_mut(&message.group_id) else {
+            return amount;
+        };
+        group.members.push(sender_id.clone());
+        group.join_fee_balance = group
+            .join_fee_balance
+            .checked_add(amount.0)
+            .expect("ERR_BALANCE_OVERFLOW");
+
+        events::member_joined(message.group_id, &sender_id, amount.0);
+        U128(0)
+    }
+
+    #[payable]
+    pub fn withdraw_join_fees(&mut self, group_id: u64, amount: U128) {
+        let owner = env::predecessor_account_id();
+        let group = self.group(group_id);
+        assert_eq!(owner, group.owner, "ERR_NOT_GROUP_OWNER");
+        assert!(amount.0 > 0, "ERR_ZERO_AMOUNT");
+        assert!(
+            group.join_fee_balance >= amount.0,
+            "ERR_INSUFFICIENT_JOIN_FEES"
+        );
+        assert!(
+            !self.pending_withdrawals.contains_key(&group_id),
+            "ERR_WITHDRAW_PENDING"
+        );
+        let join_ft = group.join_ft.clone();
+
+        self.pending_withdrawals.insert(
+            group_id,
+            PendingWithdrawal {
+                group_id,
+                owner: owner.clone(),
+                amount: amount.0,
+            },
+        );
+
+        ext_ft::ext(join_ft)
+            .with_static_gas(GAS_FOR_FT_TRANSFER)
+            .with_attached_deposit(ONE_YOCTO)
+            .ft_transfer(owner.clone(), amount, None)
+            .then(
+                Self::ext(env::current_account_id())
+                    .with_static_gas(GAS_FOR_WITHDRAW_CALLBACK)
+                    .on_withdraw_complete(group_id, owner, amount),
+            );
+    }
+
+    #[private]
+    pub fn on_withdraw_complete(&mut self, group_id: u64, owner: AccountId, amount: U128) {
+        let succeeded = matches!(env::promise_result(0), PromiseResult::Successful(_));
+        let pending = self.pending_withdrawals.remove(&group_id);
+
+        if !succeeded {
+            if pending.is_some() {
+                events::join_fees_withdraw_failed(group_id, amount.0);
+            }
+            return;
+        }
+
+        if pending.is_some() {
+            if let Some(group) = self.groups.get_mut(&group_id) {
+                group.join_fee_balance = group
+                    .join_fee_balance
+                    .checked_sub(amount.0)
+                    .expect("ERR_WITHDRAW_ACCOUNTING");
+            }
+            events::join_fees_withdrawn(group_id, &owner, amount.0);
+        }
     }
 
     fn group(&self, group_id: u64) -> &Group {

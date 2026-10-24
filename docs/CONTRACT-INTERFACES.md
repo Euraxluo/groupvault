@@ -94,6 +94,8 @@ ft_on_transfer(sender_id: AccountId, amount: U128, msg: String) -> U128
 - On success add the sender once, credit `amount` to the group fee account, and
   return `"0"`.
 - The callback must never add staking weight or create a DAO proposal.
+- Overpayment is accepted in full; the plan's contract tests prove the tracked
+  balance and the FT contract balance agree.
 
 ## Withdraw join fees
 
@@ -106,6 +108,8 @@ withdraw_join_fees(group_id: u64, amount: U128)
 - Implemented as an FT transfer to the owner followed by a private callback.
 - The accounting balance decreases only when the FT transfer succeeds.
 - A failed withdrawal must leave both accounting and member state unchanged.
+- A group can have at most one withdrawal in flight; a second attempt panics
+  with `ERR_WITHDRAW_PENDING`.
 
 ## Chat log
 

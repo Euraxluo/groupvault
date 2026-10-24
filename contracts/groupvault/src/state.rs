@@ -7,6 +7,7 @@ use crate::views::GroupView;
 pub enum StorageKey {
     Groups,
     GroupIds,
+    PendingWithdrawals,
 }
 
 #[near(serializers = [borsh])]
@@ -22,6 +23,13 @@ pub struct Group {
     pub convert_pending: bool,
     pub created_at: u64,
     pub join_fee_balance: u128,
+}
+
+#[near(serializers = [borsh])]
+pub struct PendingWithdrawal {
+    pub group_id: u64,
+    pub owner: AccountId,
+    pub amount: u128,
 }
 
 impl Group {

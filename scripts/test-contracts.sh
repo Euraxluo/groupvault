@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CONTRACTS="$ROOT/contracts"
 WASM="$CONTRACTS/target/wasm32-unknown-unknown/release/groupvault_contract.wasm"
+TOKEN_WASM="$CONTRACTS/target/wasm32-unknown-unknown/release/groupvault_test_token.wasm"
 
 rustup target add wasm32-unknown-unknown >/dev/null
 
@@ -13,14 +14,26 @@ cargo build \
   --target wasm32-unknown-unknown \
   --release
 
+cargo build \
+  --manifest-path "$CONTRACTS/Cargo.toml" \
+  --package groupvault-test-token \
+  --target wasm32-unknown-unknown \
+  --release
+
 test -s "$WASM"
+test -s "$TOKEN_WASM"
 echo "wasm: $WASM"
 shasum -a 256 "$WASM"
+echo "token wasm: $TOKEN_WASM"
+shasum -a 256 "$TOKEN_WASM"
 
-cargo test --manifest-path "$CONTRACTS/Cargo.toml" --workspace
+cd "$CONTRACTS"
+cargo test --workspace --lib
 
-GROUPVAULT_WASM="$WASM" cargo test \
-  --manifest-path "$CONTRACTS/Cargo.toml" \
+GROUPVAULT_WASM="$WASM" GROUPVAULT_TOKEN_WASM="$TOKEN_WASM" cargo test \
   --package groupvault-contract \
   --test create_group \
-  --test views
+  --test views \
+  --test join_fee \
+  --test join_fee_refund \
+  --test withdraw_fees
