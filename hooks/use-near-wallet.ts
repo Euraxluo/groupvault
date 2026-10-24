@@ -84,6 +84,10 @@ export function useNearSession(): NearSession | null {
     let cancelled = false
     createNearWalletSelector().then((next) => {
       if (!cancelled) setSession(next)
+    }).catch((reason: unknown) => {
+      // Configuration or wallet availability errors are surfaced by the
+      // wallet hook; this hook must not throw during render.
+      console.warn("[GroupVault] NEAR session unavailable", reason)
     })
     return () => {
       cancelled = true
