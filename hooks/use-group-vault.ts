@@ -12,6 +12,7 @@ import { NearRpc } from "@/lib/near/rpc"
 import { joinGroup } from "@/lib/near/ft"
 import type { SignedReceipt } from "@/lib/near/actions"
 import { useNearSession } from "@/hooks/use-near-session"
+import { getConnectedAccountId } from "@/lib/near/selector"
 
 export interface GroupContext {
   ready: boolean
@@ -81,21 +82,19 @@ export function useCreateGroup() {
       input: CreateGroupInput,
       deposit: string,
     ): Promise<SignedReceipt & { groupId: number | null }> => {
-      if (!session) throw new Error("Wallet session is not ready")
-      const accountId = session.selector.store
-        .getState()
-        .accounts.find((account) => account.active)?.accountId
-      if (!accountId) throw new Error("Connect a wallet before creating a group")
-
-      const config = getNearConfig()
-      const client = createGroupVaultClient(
-        session.selector,
-        new NearRpc(config),
-        config.groupVaultContractId,
-      )
       setSubmitting(true)
       setError(null)
       try {
+        if (!session) throw new Error("Wallet session is not ready")
+        const accountId = getConnectedAccountId(session.selector)
+        if (!accountId) throw new Error("Connect a wallet before creating a group")
+
+        const config = getNearConfig()
+        const client = createGroupVaultClient(
+          session.selector,
+          new NearRpc(config),
+          config.groupVaultContractId,
+        )
         const receipt = await client.createGroup(accountId, input, deposit)
 
         // Prefer the contract return value. If the wallet does not expose it,
@@ -139,15 +138,13 @@ export function useJoinGroup(groupId: number) {
 
   const join = useCallback(
     async (amount: string) => {
-      if (!session) throw new Error("Wallet session is not ready")
-      const accountId = session.selector.store
-        .getState()
-        .accounts.find((account) => account.active)?.accountId
-      if (!accountId) throw new Error("Connect a wallet before joining")
-      const config = getNearConfig()
       setSubmitting(true)
       setError(null)
       try {
+        if (!session) throw new Error("Wallet session is not ready")
+        const accountId = getConnectedAccountId(session.selector)
+        if (!accountId) throw new Error("Connect a wallet before joining")
+        const config = getNearConfig()
         return await joinGroup(session.selector, {
           signerId: accountId,
           groupId,

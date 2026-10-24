@@ -6,7 +6,7 @@ import { IndexerWorker } from "./worker.js"
 
 const config = loadConfig()
 const store = new MessageStore(config.dbPath)
-const rpc = new NearRpcClient(config.rpcUrl)
+const rpc = new NearRpcClient(config.rpcUrl, config.contractId)
 const worker = new IndexerWorker(store, rpc, {
   contractId: config.contractId,
   startBlock: config.startBlock,

@@ -13,7 +13,9 @@ let walletState = {
 vi.mock("@/hooks/use-near-wallet", () => ({
   useNearWallet: () => ({
     ...walletState,
+    keypairMode: false,
     connect,
+    connectKeypair: vi.fn(),
     disconnect,
   }),
 }))
@@ -27,6 +29,7 @@ describe("copied shell wallet dialog", () => {
 
     expect(screen.getByText(/No wallet connected/i)).toBeInTheDocument()
     expect(screen.getByRole("button", { name: /Connect wallet/i })).toBeEnabled()
+    expect(screen.getByRole("button", { name: /Keypair \(demo\)/i })).toBeEnabled()
     expect(screen.queryByText(/zkLogin|passkey|Sui Wallet/i)).not.toBeInTheDocument()
   })
 

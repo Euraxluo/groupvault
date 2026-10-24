@@ -1,6 +1,8 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
+import { getConnectedAccountId } from "@/lib/near/selector"
+import { subscribeDemoKeypair } from "@/lib/near/keypair-session"
 
 import { getNearConfig } from "@/lib/near/config"
 import { CONVERT_DEPOSIT } from "@/lib/near/deposits"
@@ -28,11 +30,14 @@ export function useConvert(groupId: number): ConvertState {
 
   useEffect(() => {
     if (!session) return
-    setAccountId(
-      session.selector.store
-        .getState()
-        .accounts.find((account) => account.active)?.accountId ?? null,
-    )
+    const sync = () => setAccountId(getConnectedAccountId(session.selector))
+    sync()
+    const unsubDemo = subscribeDemoKeypair(sync)
+    const sub = session.selector.store.observable.subscribe(sync)
+    return () => {
+      unsubDemo()
+      sub.unsubscribe()
+    }
   }, [session])
 
   const refresh = useCallback(async () => {
@@ -80,8 +85,23 @@ export function useConvert(groupId: number): ConvertState {
           purpose,
           CONVERT_DEPOSIT,
         )
-        // Wait for final state; never invent dao_id from the submitted hash.
-        await refresh()
+        // The factory callback lands after the owner transaction executes, so
+        // the immediate read still shows convert_pending. Poll until the final
+        // state arrives; never invent dao_id from the submitted hash.
+        const deadline = Date.now() + 180_000
+        let sawPending = false
+        while (Date.now() < deadline) {
+          const next = await client.getGroup(groupId)
+          setGroup(next)
+          if (next.dao_id) break
+          if (next.convert_pending) {
+            sawPending = true
+          } else if (sawPending) {
+            // The callback cleared pending without a dao_id: factory failure.
+            break
+          }
+          await new Promise((resolve) => setTimeout(resolve, 3000))
+        }
       } catch (reason) {
         setError(reason instanceof Error ? reason.message : String(reason))
         throw reason

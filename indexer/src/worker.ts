@@ -67,17 +67,53 @@ export class IndexerWorker {
     let processedBlocks = 0
     let insertedMessages = 0
 
+    // Testnet produces ~1 block/s. Fetching blocks strictly sequentially is
+    // slower than that once each block costs several RPC round-trips, so the
+    // cursor falls further behind forever. Fetch a bounded window concurrently
+    // and commit it in ascending order to keep the cursor monotonic.
+    const windowSize = 8
     while (last < head) {
-      const height = last + 1
-      const receipts = await this.rpc.chunkMessages(height)
-      const messages = receipts
-        .filter((receipt) => receipt.executorId === this.options.contractId)
-        .flatMap((receipt) =>
-          parseReceiptLogs(receipt.receiptId, receipt.logs, height),
-        )
-      insertedMessages += this.store.commitBlock(height, messages)
-      last = height
-      processedBlocks += 1
+      const heights: number[] = []
+      for (
+        let height = last + 1;
+        height <= head && heights.length < windowSize;
+        height += 1
+      ) {
+        heights.push(height)
+      }
+      if (heights.length === 0) break
+
+      const fetched = await Promise.allSettled(
+        heights.map(async (height) => ({
+          height,
+          receipts: await this.rpc.chunkMessages(height),
+        })),
+      )
+
+      // Commit only the contiguous prefix that succeeded. A throttled block
+      // (public RPC 429) must not discard the whole window, and the cursor must
+      // never skip a gap.
+      let committed = 0
+      for (const result of fetched) {
+        if (result.status === "rejected") {
+          this.recordError(result.reason)
+          break
+        }
+        const { height, receipts } = result.value
+        const messages = receipts
+          .filter((receipt) => receipt.executorId === this.options.contractId)
+          .flatMap((receipt) =>
+            parseReceiptLogs(receipt.receiptId, receipt.logs, height),
+          )
+        insertedMessages += this.store.commitBlock(height, messages)
+        last = height
+        processedBlocks += 1
+        committed += 1
+      }
+      if (committed === 0) {
+        // Nothing advanced; surface the failure instead of spinning silently.
+        throw new Error(this.lastError ?? "indexer window made no progress")
+      }
     }
 
     this.lastError = null

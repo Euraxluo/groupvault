@@ -23,13 +23,32 @@ export default defineConfig({
       },
     },
   ],
-  webServer: {
-    // Always start a fresh server so NEXT_PUBLIC_* values are compiled into the
-    // client bundle for this exact run. A stale server with different config
-    // must never be reused.
-    command: "pnpm dev -- --hostname 127.0.0.1 --port 3100",
-    url: "http://127.0.0.1:3100",
-    reuseExistingServer: false,
-    timeout: 120_000,
-  },
+  webServer: [
+    {
+      // Always start a fresh server so NEXT_PUBLIC_* values are compiled into
+      // the client bundle for this exact run. A stale server with different
+      // config must never be reused.
+      command: "pnpm dev -- --hostname 127.0.0.1 --port 3100",
+      url: "http://127.0.0.1:3100",
+      reuseExistingServer: false,
+      timeout: 120_000,
+    },
+    {
+      // Chat assertions read the indexer, so the run owns its lifecycle.
+      // `:memory:` guarantees a fresh cursor at the current finalized head;
+      // otherwise a stale file cursor would replay thousands of blocks.
+      command: "pnpm indexer:dev",
+      url: "http://127.0.0.1:8787/health",
+      reuseExistingServer: false,
+      timeout: 120_000,
+      env: {
+        INDEXER_RPC_URL:
+          process.env.INDEXER_RPC_URL ?? "https://test.rpc.fastnear.com",
+        GROUPVAULT_CONTRACT_ID: process.env.NEXT_PUBLIC_GROUPVAULT_CONTRACT ?? "",
+        INDEXER_DB_PATH: ":memory:",
+        INDEXER_INITIAL_BACKFILL_BLOCKS: "0",
+        INDEXER_POLL_INTERVAL_MS: "1500",
+      },
+    },
+  ],
 })

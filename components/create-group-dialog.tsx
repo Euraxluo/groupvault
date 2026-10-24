@@ -69,8 +69,9 @@ export function CreateGroupDialog({ open, onOpenChange }: CreateGroupDialogProps
       router.push(
         receipt.groupId === null ? "/groups" : `/groups/${receipt.groupId}`,
       )
-    } catch {
-      // The hook exposes the wallet/RPC error; do not invent success.
+    } catch (reason) {
+      // Hook may not have set error if the throw happened before its try.
+      setLocalError(reason instanceof Error ? reason.message : String(reason))
     }
   }
 

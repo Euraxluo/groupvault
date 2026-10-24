@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
+import { getConnectedAccountId } from "@/lib/near/selector"
 
 import { getNearConfig } from "@/lib/near/config"
 import { NearRpc } from "@/lib/near/rpc"
@@ -55,9 +56,9 @@ export function useVotes(daoId: string, proposalIds: number[] = []): VoteContext
   }, [refresh])
 
   const requireAccount = (): string => {
-    const accountId = session?.selector.store
-      .getState()
-      .accounts.find((account) => account.active)?.accountId
+    const accountId = session
+      ? getConnectedAccountId(session.selector)
+      : null
     if (!client || !accountId) throw new Error("Connect a council wallet first")
     return accountId
   }

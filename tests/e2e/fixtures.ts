@@ -3,6 +3,76 @@ import { join } from "node:path"
 
 import { test as base, expect, type Page } from "@playwright/test"
 
+export interface SentTransaction {
+  hash: string
+  signerId: string
+  receiverId: string
+  methodName: string
+  receiptIds: string[]
+}
+
+/** Collect real signed transactions the browser broadcasts to NEAR RPC. */
+export function recordSentTransactions(page: Page): SentTransaction[] {
+  const sent: SentTransaction[] = []
+  page.on("response", async (response) => {
+    const request = response.request()
+    if (request.method() !== "POST") return
+    if (!/jsonrpc|near/.test(request.url())) return
+    const payload = request.postData()
+    if (!payload || !payload.includes("send_tx")) return
+    try {
+      const body = (await response.json()) as {
+        result?: {
+          receipts_outcome?: { id?: string }[]
+          transaction?: {
+            hash?: string
+            signer_id?: string
+            receiver_id?: string
+            actions?: { FunctionCall?: { method_name?: string } }[]
+          }
+        }
+      }
+      const tx = body.result?.transaction
+      if (!tx?.hash || !tx.signer_id) return
+      sent.push({
+        hash: tx.hash,
+        signerId: tx.signer_id,
+        receiverId: tx.receiver_id ?? "",
+        methodName: tx.actions?.[0]?.FunctionCall?.method_name ?? "",
+        receiptIds: (body.result?.receipts_outcome ?? [])
+          .map((receipt) => receipt.id)
+          .filter((id): id is string => typeof id === "string" && id.length > 0),
+      })
+    } catch {
+      // Non-JSON or aborted responses are ignored; only confirmed txs count.
+    }
+  })
+  return sent
+}
+
+export function lastTxFor(
+  sent: SentTransaction[],
+  signerId: string,
+  methodName: string,
+): string | undefined {
+  return [...sent]
+    .reverse()
+    .find((tx) => tx.signerId === signerId && tx.methodName === methodName)?.hash
+}
+
+export function lastReceiptIdsFor(
+  sent: SentTransaction[],
+  signerId: string,
+  methodName: string,
+): string[] {
+  return (
+    [...sent]
+      .reverse()
+      .find((tx) => tx.signerId === signerId && tx.methodName === methodName)
+      ?.receiptIds ?? []
+  )
+}
+
 export interface DemoEvidence {
   network: "testnet"
   owner_account_id: string
@@ -38,6 +108,15 @@ export function saveEvidence(evidence: DemoEvidence): void {
     EVIDENCE_PATH,
     `${JSON.stringify({ ...evidence, recorded_at: new Date().toISOString() }, null, 2)}\n`,
   )
+}
+
+/**
+ * Start a run from a clean evidence file. Steps then add only the fields they
+ * truly produced, so a previous run's group/DAO/tx can never leak into this
+ * run's evidence (e.g. a stale `dao_id` pointing at another group's DAO).
+ */
+export function resetEvidence(evidence: DemoEvidence): void {
+  saveEvidence({ ...evidence })
 }
 
 export const test = base.extend<{ evidence: DemoEvidence | null }>({

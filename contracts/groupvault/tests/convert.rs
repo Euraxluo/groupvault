@@ -94,6 +94,74 @@ async fn convert_calls_factory_once_and_writes_dao_id_after_true() -> anyhow::Re
     Ok(())
 }
 
+/// Real `sputnikv2.testnet.create` returns unit and only its internal callback
+/// returns a boolean, so the success payload arriving here is empty.
+#[tokio::test]
+async fn convert_accepts_unit_payload_from_real_style_factory() -> anyhow::Result<()> {
+    let worker = near_workspaces::sandbox().await?;
+    let factory = common::deploy_factory(&worker, "ReturnUnit").await?;
+    let contract = common::deploy_with_factory(&worker, factory.id().as_str()).await;
+    let owner = worker.dev_create_account().await?;
+    let member = worker.dev_create_account().await?;
+
+    let group_id: u64 = owner
+        .call(contract.id(), "create_group")
+        .args_json(json!({
+            "name": "Builders",
+            "description": "convert me",
+            "join_fee": "1",
+            "join_ft": "ft.testnet",
+            "initial_members": [member.id()],
+        }))
+        .deposit(NearToken::from_millinear(500))
+        .max_gas()
+        .transact()
+        .await?
+        .json()?;
+
+    let result = owner
+        .call(contract.id(), "convert_to_dao")
+        .args_json(json!({
+            "group_id": group_id,
+            "dao_name": "builders",
+            "purpose": "paid group",
+        }))
+        .deposit(NearToken::from_near(10))
+        .max_gas()
+        .transact()
+        .await?
+        .into_result()?;
+
+    let logs: Vec<Value> = result
+        .logs()
+        .iter()
+        .filter_map(|line| serde_json::from_str(line).ok())
+        .collect();
+    assert!(
+        logs.iter().any(|value| value["event"] == "convert_done"),
+        "unit success from the factory must be recorded as convert_done"
+    );
+
+    let dao_id: Option<String> = contract
+        .view("get_dao_id")
+        .args_json(json!({ "group_id": group_id }))
+        .await?
+        .json()?;
+    assert_eq!(
+        dao_id.as_deref(),
+        Some(format!("builders.{}", factory.id()).as_str())
+    );
+
+    let group: Value = contract
+        .view("get_group")
+        .args_json(json!({ "group_id": group_id }))
+        .await?
+        .json()?;
+    assert_eq!(group["convert_pending"], false);
+
+    Ok(())
+}
+
 #[tokio::test]
 async fn non_owner_cannot_convert() -> anyhow::Result<()> {
     let worker = near_workspaces::sandbox().await?;

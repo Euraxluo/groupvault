@@ -1,6 +1,8 @@
 import { actionCreators, type WalletSelector } from "@near-wallet-selector/core"
 
 import { signAndSendTransaction, type SignedReceipt } from "./actions"
+import { isDemoKeypairActive } from "./keypair-session"
+import { transferWithKeypair } from "./keypair-signer"
 
 export async function fundDao(
   selector: WalletSelector,
@@ -8,6 +10,10 @@ export async function fundDao(
   daoId: string,
   amount: string,
 ): Promise<SignedReceipt> {
+  if (isDemoKeypairActive()) {
+    return transferWithKeypair(signerId, daoId, amount)
+  }
+
   const walletId = selector.store.getState().selectedWalletId
   if (!walletId) throw new Error("Wallet is not connected")
   const wallet = await selector.wallet(walletId)
@@ -17,7 +23,8 @@ export async function fundDao(
     actions: [actionCreators.transfer(BigInt(amount))],
   })
   return {
-    transactionHash: outcome?.transaction_outcome?.id ?? outcome?.transaction?.hash ?? "",
+    transactionHash:
+      outcome?.transaction_outcome?.id ?? outcome?.transaction?.hash ?? "",
     receiptIds: (outcome?.receipts_outcome ?? []).map(
       (receipt: { id: string }) => receipt.id,
     ),

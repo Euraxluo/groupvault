@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useRef, useState } from "react"
+import { getConnectedAccountId } from "@/lib/near/selector"
 
 import { getNearConfig } from "@/lib/near/config"
 import { getIndexerHealth, getMessages, type ChatMessage } from "@/lib/near/indexer"
@@ -56,9 +57,7 @@ export function useGroupMessages(groupId: number): GroupMessagesState {
   const send = useCallback(
     async (text: string) => {
       if (!session) throw new Error("Wallet session is not ready")
-      const accountId = session.selector.store
-        .getState()
-        .accounts.find((account) => account.active)?.accountId
+      const accountId = getConnectedAccountId(session.selector)
       if (!accountId) throw new Error("Connect a wallet before sending")
       const config = getNearConfig()
       const client = createGroupVaultClient(
@@ -71,7 +70,8 @@ export function useGroupMessages(groupId: number): GroupMessagesState {
       try {
         await client.sendMessage(accountId, groupId, text)
         // Wait briefly for the finalized log to reach the indexer. If it has
-        // not arrived, the UI keeps its explicit indexing-delay state.
+        // not arrived, still surface the chain-accepted message locally so the
+        // sender is not blocked by indexer lag, and keep the indexing badge on.
         const config = getNearConfig()
         for (let attempt = 0; attempt < 10; attempt += 1) {
           const page = await getMessages(config.indexerUrl, groupId)
@@ -88,6 +88,23 @@ export function useGroupMessages(groupId: number): GroupMessagesState {
           }
           await new Promise((resolve) => setTimeout(resolve, 1500))
         }
+        setMessages((prev) => {
+          if (prev.some((message) => message.sender === accountId && message.text === text)) {
+            return prev
+          }
+          return [
+            ...prev,
+            {
+              group_id: groupId,
+              sender: accountId,
+              text,
+              ts: `${Date.now()}000000`,
+              receipt_id: `pending:${accountId}:${Date.now()}`,
+              block_height: 0,
+              log_index: 0,
+            },
+          ]
+        })
         setIndexing(true)
       } catch (reason) {
         const message = reason instanceof Error ? reason.message : String(reason)

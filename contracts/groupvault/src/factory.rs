@@ -35,6 +35,13 @@ pub fn expected_dao_account(dao_name: &str, factory_id: &AccountId) -> AccountId
 }
 
 pub fn parse_factory_result(payload: &[u8]) -> Option<bool> {
+    // The real sputnikv2 factory's `create` schedules the sub-account creation
+    // and returns unit, so a successful promise resolves with an empty payload.
+    // An empty success means the factory accepted the call; a non-empty payload
+    // must still be an explicit JSON boolean (malformed output is a failure).
+    if payload.is_empty() {
+        return Some(true);
+    }
     serde_json::from_slice::<Value>(payload)
         .ok()
         .and_then(|value| value.as_bool())
@@ -76,7 +83,8 @@ mod tests {
         assert_eq!(parse_factory_result(b"true"), Some(true));
         assert_eq!(parse_factory_result(b"false"), Some(false));
         assert_eq!(parse_factory_result(b"\"true\""), None);
-        assert_eq!(parse_factory_result(b""), None);
+        // Real sputnikv2.create resolves with unit on success.
+        assert_eq!(parse_factory_result(b""), Some(true));
         assert_eq!(parse_factory_result(b"not-json"), None);
     }
 

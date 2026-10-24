@@ -1,1 +1,19 @@
-{}
+{
+  "network": "testnet",
+  "owner_account_id": "gv-a-1024-210252.testnet",
+  "member_account_id": "gv-b-1024-210252.testnet",
+  "join_ft_account_id": "gv-deployer-1024-204559-ft.testnet",
+  "join_fee": "1000000",
+  "stake_amount": "1000000",
+  "receiver_account_id": "gv-b-1024-210252.testnet",
+  "transfer_amount": "1000000000000000000000000",
+  "group_id": 13,
+  "create_tx": "8PVskrCbShWAfzjPTkbWz4o4eCrZK4yofmyCwJxqZ2k5",
+  "recorded_at": "2026-10-24T15:22:54.984Z",
+  "join_tx": "5US1FF1hYuV31nMDEJha3vdrDYDZmap7THe8DZvnz75R",
+  "message_receipt_ids": [
+    "5N9aenFotaA9pkzcoyUyhDogGZEhMhgkjePTno5Lgmsu"
+  ],
+  "convert_tx": "HcYpgB89B7GerhCHkRTYNyXqpxiav7owbPwAqby3Vp93",
+  "dao_id": "groupvault-13.sputnikv2.testnet"
+}

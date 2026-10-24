@@ -122,8 +122,8 @@ describe("IndexerWorker", () => {
     })
     await worker.initialize()
     await expect(worker.tick()).rejects.toThrow("rpc boom")
-    // Block 1 committed before the RPC failure at block 2; the cursor must not
-    // jump to the finalized head.
+    // Only the contiguous prefix before the failure is committed; the cursor
+    // must not jump to the finalized head or skip the failed gap.
     expect(store.lastProcessedBlock).toBe(1)
   })
 

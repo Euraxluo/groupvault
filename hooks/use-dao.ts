@@ -1,6 +1,8 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
+import { getConnectedAccountId } from "@/lib/near/selector"
+import { subscribeDemoKeypair } from "@/lib/near/keypair-session"
 
 import { getNearConfig } from "@/lib/near/config"
 import { NearRpc } from "@/lib/near/rpc"
@@ -35,11 +37,14 @@ export function useDao(daoId: string): DaoContext {
 
   useEffect(() => {
     if (!session) return
-    setAccountId(
-      session.selector.store
-        .getState()
-        .accounts.find((account) => account.active)?.accountId ?? null,
-    )
+    const sync = () => setAccountId(getConnectedAccountId(session.selector))
+    sync()
+    const unsubDemo = subscribeDemoKeypair(sync)
+    const sub = session.selector.store.observable.subscribe(sync)
+    return () => {
+      unsubDemo()
+      sub.unsubscribe()
+    }
   }, [session])
 
   const sputnik = session

@@ -3,6 +3,7 @@ use near_sdk::{env, near, AccountId, NearToken, PanicOnDefault};
 #[near(serializers = [borsh, json])]
 pub enum Mode {
     Succeed,
+    ReturnUnit,
     ReturnFalse,
     Fail,
     ReturnMalformed,
@@ -35,7 +36,7 @@ impl TestFactory {
     }
 
     #[payable]
-    pub fn create(&mut self, name: String, args: String) -> bool {
+    pub fn create(&mut self, name: String, args: String) {
         self.last_call = Some(LastCall {
             name,
             args,
@@ -44,11 +45,12 @@ impl TestFactory {
         });
 
         match self.mode {
-            Mode::Succeed => true,
-            Mode::ReturnFalse => false,
+            // The real sputnikv2 factory returns unit; only its callback returns bool.
+            Mode::ReturnUnit => {}
+            Mode::Succeed => env::value_return(b"true"),
+            Mode::ReturnFalse => env::value_return(b"false"),
             Mode::ReturnMalformed => {
                 env::value_return(b"\"not-a-boolean\"");
-                false
             }
             Mode::Fail => env::panic_str("ERR_FACTORY_FAILED"),
         }

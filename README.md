@@ -55,10 +55,19 @@ bounded lookback. The cursor and messages commit in one SQLite transaction, so
 a restart resumes from the last committed block and replayed receipts stay
 idempotent on `(receipt_id, log_index)`.
 
+The indexer reads receipts through `tx` results: NEAR's `chunk` responses do not
+include execution logs. It skips shards whose `tx_root` is the empty root and
+fetches a small window of blocks concurrently, so its throughput stays at or
+above testnet block production. On a public RPC this still hits HTTP 429 under
+load; `INDEXER_RPC_URL` should point at a dedicated provider for long runs.
+
 ## Product invariants
 
 - Convert is exactly one wallet signature to GroupVault, then Sputnik
-  `factory.create`; `dao_id` is written only after a successful boolean callback.
+  `factory.create`. The real factory's `create` returns unit and only its own
+  callback returns a boolean, so an empty success payload is treated as
+  accepted while any non-empty payload must still be explicit JSON `true`.
+  `dao_id` is written only in that private callback.
 - Join payment is one `ft_transfer_call`; every failure returns the full unused
   token amount and creates no membership.
 - Group chat is public `env::log_str` data plus an indexer. There is no E2E

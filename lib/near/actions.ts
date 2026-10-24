@@ -5,6 +5,9 @@ import {
   type WalletSelector,
 } from "@near-wallet-selector/core"
 
+import { isDemoKeypairActive } from "./keypair-session"
+import { signAndSendWithKeypair } from "./keypair-signer"
+
 export interface FunctionCallInput {
   receiverId: string
   methodName: string
@@ -46,14 +49,21 @@ export interface SignedReceipt {
 }
 
 /**
- * Wallet-delegated call. The user approves in the wallet; this function only
- * assembles the action and reports what the wallet returned.
+ * Product signing entrypoint.
+ *
+ * - Demo keypair mode (testnet): signs locally with near-api-js KeyPair and
+ *   broadcasts via RPC — no browser wallet prompt.
+ * - Default: wallet-selector (MyNearWallet) approval.
  */
 export async function signAndSendTransaction(
   selector: WalletSelector,
   signerId: string,
   input: FunctionCallInput,
 ): Promise<SignedReceipt> {
+  if (isDemoKeypairActive()) {
+    return signAndSendWithKeypair(signerId, input)
+  }
+
   const walletId = selector.store.getState().selectedWalletId
   if (!walletId) {
     throw new Error("Wallet is not connected")
@@ -79,7 +89,8 @@ export async function signAndSendTransaction(
   }
 
   return {
-    transactionHash: outcome?.transaction_outcome?.id ?? outcome?.transaction?.hash ?? "",
+    transactionHash:
+      outcome?.transaction_outcome?.id ?? outcome?.transaction?.hash ?? "",
     receiptIds: (outcome?.receipts_outcome ?? []).map(
       (receipt: { id: string }) => receipt.id,
     ),

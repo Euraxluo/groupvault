@@ -5,6 +5,14 @@ import { setupModal, type WalletSelectorModal } from "@near-wallet-selector/moda
 import { setupMyNearWallet } from "@near-wallet-selector/my-near-wallet"
 
 import { getNearConfig, requireGroupVault } from "./config"
+import {
+  clearDemoKeypairSession,
+  getDemoKeypairSession,
+  hydrateDemoKeypairFromRuntime,
+  setDemoKeypairSession,
+  type DemoKeypairCredentials,
+} from "./keypair-session"
+import { clearDemoAccountCache } from "./keypair-signer"
 
 export interface NearSession {
   selector: WalletSelector
@@ -15,13 +23,14 @@ export interface NearSession {
 let sessionPromise: Promise<NearSession> | null = null
 
 /**
- * The wallet selector is the only product signer. This module never creates a
- * keypair, never stores a seed, and never delegates signing to a backend.
+ * Wallet selector remains the default product signer. Demo keypair mode is an
+ * alternate testnet path for hackathon/e2e — keys never leave the tab session.
  */
 export async function createNearWalletSelector(): Promise<NearSession> {
   if (sessionPromise) return sessionPromise
 
   sessionPromise = (async () => {
+    hydrateDemoKeypairFromRuntime()
     const config = getNearConfig()
     const contractId = requireGroupVault(config)
     const selector = await setupWalletSelector({
@@ -43,6 +52,8 @@ export async function createNearWalletSelector(): Promise<NearSession> {
 }
 
 export function getConnectedAccountId(selector: WalletSelector): string | null {
+  const demo = getDemoKeypairSession()
+  if (demo) return demo.accountId
   const state = selector.store.getState()
   return state.accounts.find((account) => account.active)?.accountId ?? null
 }
@@ -54,6 +65,10 @@ export async function getConnectedAccount(): Promise<string | null> {
 
 export async function connectWallet(): Promise<string> {
   const session = await createNearWalletSelector()
+  // Prefer an already-hydrated demo keypair (Playwright injection / prior paste).
+  const demo = getDemoKeypairSession()
+  if (demo) return demo.accountId
+
   await session.modal.show()
   return new Promise((resolve, reject) => {
     const timeout = window.setTimeout(() => {
@@ -71,7 +86,26 @@ export async function connectWallet(): Promise<string> {
   })
 }
 
+/**
+ * Connect with a testnet ed25519 keypair for demo/e2e. Refuses on mainnet.
+ */
+export async function connectWithKeypair(
+  credentials: DemoKeypairCredentials,
+): Promise<string> {
+  const config = getNearConfig()
+  if (config.network !== "testnet") {
+    throw new Error("Keypair (demo) connect is testnet-only")
+  }
+  // Ensure selector is initialized so the rest of the app has a NearSession.
+  await createNearWalletSelector()
+  setDemoKeypairSession(credentials)
+  clearDemoAccountCache()
+  return credentials.accountId.trim()
+}
+
 export async function disconnectWallet(): Promise<void> {
+  clearDemoKeypairSession()
+  clearDemoAccountCache()
   const session = await createNearWalletSelector()
   const walletId = session.selector.store.getState().selectedWalletId
   if (walletId) {
@@ -82,4 +116,6 @@ export async function disconnectWallet(): Promise<void> {
 
 export function resetNearSessionForTests(): void {
   sessionPromise = null
+  clearDemoKeypairSession()
+  clearDemoAccountCache()
 }
