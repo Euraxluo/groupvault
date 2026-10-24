@@ -18,6 +18,7 @@ import {
   near,
   view,
 } from "./lib/near-cli.js"
+import { deploySubaccount, stakingAccountId } from "./lib/keypair-deploy.js"
 
 const FACTORY = "sputnikv2.testnet" as const
 const JOIN_FT_DECIMALS = 6
@@ -198,9 +199,17 @@ async function deployStaking(manifest: Manifest, groupId: number | undefined): P
 
   const account =
     manifest.sputnik_staking_account_id ??
-    `${manifest.deployer_account_id.split(".")[0]}-staking.testnet`
-  createFaucetAccount(account)
-  const tx = deployContract({
+    stakingAccountId(manifest.deployer_account_id)
+  if (manifest.sputnik_staking_account_id) {
+    throw new Error(
+      `Staking was already deployed at ${manifest.sputnik_staking_account_id}; refusing to redeploy`,
+    )
+  }
+
+  // near-cli cannot reach a working RPC on this host; sign with the deployer
+  // keypair, create a real subaccount, deploy, and initialize `new`.
+  const tx = await deploySubaccount({
+    deployer: manifest.deployer_account_id,
     accountId: account,
     wasmPath: join(ROOT, source.wasm_path),
     initFunction: "new",

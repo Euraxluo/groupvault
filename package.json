@@ -19,7 +19,8 @@
     "indexer:build": "pnpm --dir indexer build",
     "deploy:testnet": "tsx scripts/deploy-testnet.ts",
     "verify:testnet": "tsx scripts/verify-testnet.ts",
-    "verify:demo": "tsx scripts/verify-demo.ts"
+    "verify:demo": "tsx scripts/verify-demo.ts",
+    "build:staking": "bash scripts/build-staking.sh"
   },
   "dependencies": {
     "@emotion/is-prop-valid": "latest",

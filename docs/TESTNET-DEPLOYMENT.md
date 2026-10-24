@@ -79,6 +79,24 @@ It requires `deployments/staking-source.json` with the pinned upstream commit
 and the built wasm checksum. A missing DAO, missing source record, or checksum
 mismatch is a hard failure.
 
+Build the pinned source first (it clones `near-daos/sputnik-dao-contract` into
+the gitignored `vendor/` directory and rewrites `deployments/staking-source.json`):
+
+```bash
+pnpm build:staking
+```
+
+The deploy creates `sputnikstaking.<deployer>` as a real subaccount. A
+top-level `<deployer-prefix>-staking.testnet` name cannot be created by the
+deployer account. The account's key is written to
+`~/.near-credentials/testnet/` before the contract deploy so an interrupted
+deploy can be resumed instead of recreating the account.
+
+`near-cli` 4 defaults to `rpc.testnet.near.org`, which is frequently
+unreachable from this host, so the staking phase signs with the deployer
+keypair through the same failover provider as the demo signer. Set
+`NEAR_RPC_URL` to override the endpoint.
+
 ## Manual acceptance after deploy
 
 ```bash

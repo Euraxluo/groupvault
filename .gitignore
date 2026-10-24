@@ -46,3 +46,6 @@ yarn-error.log*
 
 # macOS
 .DS_Store
+
+# pinned upstream builds (source is fetched by scripts/build-staking.sh)
+/vendor/

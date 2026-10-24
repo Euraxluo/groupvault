@@ -1,0 +1,9 @@
+{
+  "commit": "5434a59dec23ee0c49df8c8c4350c208a7e75b0b",
+  "repository": "https://github.com/near-daos/sputnik-dao-contract",
+  "crate": "sputnik-staking",
+  "build": "cargo build -p sputnik-staking --target wasm32-unknown-unknown --release (rust 1.86)",
+  "wasm_path": "artifacts/wasm/sputnik_staking.wasm",
+  "wasm_sha256": "e76fb65b6844785bff04430684a03203970f0a88676fa2ed23ccfdf69a414ed6",
+  "built_at": "2026-10-24T15:35:00Z"
+}

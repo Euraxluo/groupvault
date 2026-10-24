@@ -28,7 +28,8 @@ export function near(args: string[], options: { allowFailure?: boolean } = {}): 
   }
 }
 
-const RPC_URL = process.env.NEAR_RPC_URL ?? "https://rpc.testnet.near.org"
+const RPC_URL =
+  process.env.NEAR_RPC_URL ?? "https://test.rpc.fastnear.com"
 
 async function rpcCall<T>(
   method: string,

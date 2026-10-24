@@ -4,12 +4,20 @@
   "factory_id": "sputnikv2.testnet",
   "deployments": {
     "groupvault": "6bWzytJJirFkpwcdxfiKQmKQuVMtM13cg6WpcXkwAtbg",
-    "join_ft": "Dhr6sm5JLKTY9PhCWBngKgUBQzGnGPAnWhUYkmcB6PCj"
+    "join_ft": "Dhr6sm5JLKTY9PhCWBngKgUBQzGnGPAnWhUYkmcB6PCj",
+    "staking": "xTZfd1BcUX3LbVnzFgJuEiCMKmzZ1W6JnkaZCs8yoBt"
   },
   "groupvault_account_id": "gv-deployer-1024-204559-groupvault.testnet",
   "groupvault_wasm_sha256": "4d245f2dff9fc094f94e0908d6f3ac88c917fdabda4a04c966b453ce3b85d5d8",
   "deployed_at": "2026-10-24T12:53:43.300Z",
   "join_ft_account_id": "gv-deployer-1024-204559-ft.testnet",
   "join_ft_wasm_sha256": "02726bbe4c44258207cb6b1578b3d7afa73f78d7884fd2b8bca032421c279059",
-  "join_ft_decimals": 6
+  "join_ft_decimals": 6,
+  "sputnik_staking_account_id": "sputnikstaking.gv-deployer-1024-204559.testnet",
+  "sputnik_staking_source_commit": "5434a59dec23ee0c49df8c8c4350c208a7e75b0b",
+  "sputnik_staking_wasm_sha256": "e76fb65b6844785bff04430684a03203970f0a88676fa2ed23ccfdf69a414ed6",
+  "sputnik_staking_deploy_tx": "xTZfd1BcUX3LbVnzFgJuEiCMKmzZ1W6JnkaZCs8yoBt",
+  "sputnik_staking_init_tx": "CXPY7wXvieCcqEKA8LfY2SEMBB9fYd7Mzffuc21VNMiW",
+  "sputnik_staking_account_created": "deployer createAccount (interrupted earlier attempt; key persisted before deploy)",
+  "sputnik_staking_owner_wired": "unset until the browser proposal (T013)"
 }
