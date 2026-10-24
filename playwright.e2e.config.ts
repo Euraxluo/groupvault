@@ -44,7 +44,12 @@ export default defineConfig({
       env: {
         INDEXER_RPC_URL:
           process.env.INDEXER_RPC_URL ?? "https://test.rpc.fastnear.com",
-        GROUPVAULT_CONTRACT_ID: process.env.NEXT_PUBLIC_GROUPVAULT_CONTRACT ?? "",
+        // Fall back to the deployed manifest so `--list` and non-governance
+        // runs do not require the env var just to boot the indexer.
+        GROUPVAULT_CONTRACT_ID:
+          process.env.NEXT_PUBLIC_GROUPVAULT_CONTRACT ??
+          process.env.GROUPVAULT_CONTRACT_ID ??
+          "gv-deployer-1024-204559-groupvault.testnet",
         INDEXER_DB_PATH: ":memory:",
         INDEXER_INITIAL_BACKFILL_BLOCKS: "0",
         INDEXER_POLL_INTERVAL_MS: "1500",

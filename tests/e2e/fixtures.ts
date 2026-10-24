@@ -88,6 +88,26 @@ export interface DemoEvidence {
   join_tx?: string
   convert_tx?: string
   message_receipt_ids?: string[]
+  // T013 governance evidence
+  staking_contract_id?: string
+  set_staking_tx?: string
+  set_staking_proposal_id?: number
+  tokenweight_policy_tx?: string
+  tokenweight_proposal_id?: number
+  delegation?: string
+  delegation_before?: string
+  stake_tx?: string
+  delegate_tx?: string
+  dao_fund_tx?: string
+  transfer_proposal_tx?: string
+  proposal_id?: number
+  proposal_status_before_approve?: string
+  zero_weight_rejected?: boolean
+  proposal_status_after_rejection?: string
+  transfer_approve_tx?: string
+  proposal_status_after_approve?: string
+  receiver_balance_before?: string
+  receiver_balance_after?: string
   recorded_at?: string
 }
 

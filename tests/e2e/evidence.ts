@@ -72,6 +72,19 @@ export async function viewCall<T>(
   return JSON.parse(text) as T
 }
 
+/** Final native NEAR balance, read from chain rather than from the UI. */
+export async function nearBalance(
+  request: APIRequestContext,
+  accountId: string,
+): Promise<string> {
+  const result = await rpc<{ amount: string }>(request, "query", {
+    request_type: "view_account",
+    finality: "final",
+    account_id: accountId,
+  })
+  return result.amount
+}
+
 export async function expectMember(
   request: APIRequestContext,
   contractId: string,

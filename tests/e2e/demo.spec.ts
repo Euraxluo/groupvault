@@ -11,10 +11,20 @@ import {
   saveEvidence,
 } from "./fixtures"
 import { connectWalletForDemo, waitForWalletApproval } from "./wallet"
-import { expectDao, expectMember, viewCall } from "./evidence"
+import { expectDao, expectMember, nearBalance, viewCall } from "./evidence"
 
 const CONTRACT = process.env.NEXT_PUBLIC_GROUPVAULT_CONTRACT ?? ""
 test.describe.configure({ mode: "serial" })
+
+const GOVERNANCE = "governance"
+
+/** Governance steps run only in the second phase, after Convert is on chain. */
+function skipUnlessGovernance(): void {
+  test.skip(
+    process.env.DEMO_PHASE !== GOVERNANCE,
+    "set DEMO_PHASE=governance to run the TokenWeight/Transfer phase",
+  )
+}
 
 /** Give the response handler a moment to record the confirmed tx. */
 async function recordedTx(
@@ -201,3 +211,265 @@ test("A converts the group with one signature", async ({ page, context, evidence
   saveEvidence({ ...loadEvidence(), dao_id: daoId })
 })
 
+/**
+ * T013 governance phase, run against the group/DAO already recorded in
+ * artifacts/demo-input.json (Convert complete).
+ *
+ * Under the default RoleWeight policy the council has two members and the
+ * threshold is [1, 2], so Sputnik requires both approvals (ratio 1/2 of a
+ * 2-vote total plus one). The person who proposes is also a voter, so the
+ * proposal proposal -> A approve -> B approve sequence executes it.
+ *
+ * Once the policy becomes TokenWeight, weight comes from delegated stake, so
+ * B (who staked nothing) must be rejected locally before a wallet call.
+ */
+test.describe("governance", () => {
+  test("A proposes and both approve SetStakingContract", async ({ page, context, evidence }) => {
+    skipUnlessGovernance()
+    const staking = process.env.DEMO_STAKING_CONTRACT ?? ""
+    if (!evidence?.dao_id) throw new Error("Convert must be complete before governance")
+    if (!staking) throw new Error("DEMO_STAKING_CONTRACT is required")
+    expect(staking).toMatch(/\.testnet$/)
+
+    const sent = recordSentTransactions(page)
+    await page.goto(`/dao/${evidence.dao_id}/staking/setup`)
+    await connectWalletForDemo(page, "A")
+    await page.getByPlaceholder("staking account ID").fill(staking)
+    await page.getByRole("button", { name: /Add SetStakingContract proposal/i }).click()
+    await waitForWalletApproval(page, "add_proposal SetStakingContract")
+    const proposalTx = await recordedTx(page, sent, evidence.owner_account_id, "add_proposal")
+
+    const proposalId = await viewCall<number>(
+      context.request,
+      evidence.dao_id,
+      "get_last_proposal_id",
+    )
+    await page.goto(`/dao/${evidence.dao_id}/proposals?ids=${proposalId}`)
+    await page.getByRole("button", { name: /Approve exact kind/i }).click()
+    await waitForWalletApproval(page, "act_proposal A")
+
+    await page.goto(`/dao/${evidence.dao_id}/proposals?ids=${proposalId}`)
+    await connectWalletForDemo(page, "B")
+    await page.getByRole("button", { name: /Approve exact kind/i }).click()
+    await waitForWalletApproval(page, "act_proposal B")
+
+    await expect
+      .poll(
+        async () =>
+          viewCall<string | null>(context.request, evidence.dao_id!, "get_staking_contract"),
+        { timeout: 180_000 },
+      )
+      .toBe(staking)
+
+    saveEvidence({
+      ...loadEvidence(),
+      staking_contract_id: staking,
+      set_staking_tx: proposalTx,
+      set_staking_proposal_id: proposalId,
+    })
+  })
+
+  test("two approvals switch the DAO policy to TokenWeight", async ({ page, context, evidence }) => {
+    skipUnlessGovernance()
+    if (!evidence?.dao_id) throw new Error("Convert must be complete before governance")
+
+    const sent = recordSentTransactions(page)
+    await page.goto(`/dao/${evidence.dao_id}/staking/setup`)
+    await connectWalletForDemo(page, "A")
+    await page.getByRole("button", { name: /Add TokenWeight policy proposal/i }).click()
+    await waitForWalletApproval(page, "add_proposal TokenWeight")
+    const policyTx = await recordedTx(page, sent, evidence.owner_account_id, "add_proposal")
+
+    const proposalId = await viewCall<number>(
+      context.request,
+      evidence.dao_id,
+      "get_last_proposal_id",
+    )
+    await page.goto(`/dao/${evidence.dao_id}/proposals?ids=${proposalId}`)
+    await page.getByRole("button", { name: /Approve exact kind/i }).click()
+    await waitForWalletApproval(page, "act_proposal A")
+
+    await page.goto(`/dao/${evidence.dao_id}/proposals?ids=${proposalId}`)
+    await connectWalletForDemo(page, "B")
+    await page.getByRole("button", { name: /Approve exact kind/i }).click()
+    await waitForWalletApproval(page, "act_proposal B")
+
+    await expect
+      .poll(
+        async () =>
+          (
+            await viewCall<{ default_vote_policy: { weight_kind: string } }>(
+              context.request,
+              evidence.dao_id!,
+              "get_policy",
+            )
+          ).default_vote_policy.weight_kind,
+        { timeout: 180_000 },
+      )
+      .toBe("TokenWeight")
+
+    saveEvidence({
+      ...loadEvidence(),
+      tokenweight_policy_tx: policyTx,
+      tokenweight_proposal_id: proposalId,
+    })
+  })
+
+  test("A stakes the join FT and delegates, proving stake is the only weight", async ({
+    page,
+    context,
+    evidence,
+  }) => {
+    skipUnlessGovernance()
+    const stakeAmount = process.env.DEMO_STAKE_AMOUNT ?? "1000000"
+    if (!evidence?.dao_id || !evidence.staking_contract_id) {
+      throw new Error("Staking setup must run before staking")
+    }
+    const payload = { account_id: evidence.owner_account_id }
+    const weightBefore = BigInt(
+      await viewCall<string>(context.request, evidence.dao_id, "delegation_balance_of", payload),
+    )
+
+    const sent = recordSentTransactions(page)
+    await page.goto(`/dao/${evidence.dao_id}/staking/setup`)
+    await connectWalletForDemo(page, "A")
+    await page.getByLabel("Stake amount (base units)").fill(stakeAmount)
+
+    await page.getByRole("button", { name: /^Storage deposit$/i }).click()
+    await waitForWalletApproval(page, "storage_deposit")
+    await page.getByRole("button", { name: /FT transfer/i }).click()
+    await waitForWalletApproval(page, "ft_transfer_call stake")
+    await page.getByRole("button", { name: /^Delegate$/i }).click()
+    await waitForWalletApproval(page, "delegate")
+
+    await expect
+      .poll(
+        async () =>
+          BigInt(
+            await viewCall<string>(
+              context.request,
+              evidence.dao_id!,
+              "delegation_balance_of",
+              payload,
+            ),
+          ),
+        { timeout: 120_000 },
+      )
+      .toBeGreaterThan(weightBefore)
+
+    saveEvidence({
+      ...loadEvidence(),
+      delegation_before: String(weightBefore),
+      delegation: String(
+        await viewCall<string>(context.request, evidence.dao_id, "delegation_balance_of", payload),
+      ),
+      stake_tx: lastTxFor(sent, evidence.owner_account_id, "ft_transfer_call"),
+      delegate_tx: lastTxFor(sent, evidence.owner_account_id, "delegate"),
+    })
+  })
+
+  test("B is rejected as a zero-weight voter", async ({ page, context, evidence }) => {
+    skipUnlessGovernance()
+    if (!evidence?.dao_id) throw new Error("Governance evidence is incomplete")
+
+    const sent = recordSentTransactions(page)
+    await page.goto(`/dao/${evidence.dao_id}/treasury`)
+    await connectWalletForDemo(page, "A")
+    const amount = process.env.DEMO_TRANSFER_AMOUNT ?? "1000000000000000000000000"
+    const receiver = evidence.receiver_account_id
+    await page.getByLabel("Fund amount (yoctoNEAR)").fill(amount)
+    await page.getByRole("button", { name: /Fund DAO from wallet/i }).click()
+    await waitForWalletApproval(page, "fund DAO")
+    const fundTx = await recordedTx(page, sent, evidence.owner_account_id, "transfer")
+
+    await page.getByPlaceholder("receiver.testnet").fill(receiver)
+    await page.getByPlaceholder("amount in yoctoNEAR").fill(amount)
+    await page.getByPlaceholder("description").fill("T013 transfer")
+    await page.getByRole("button", { name: /Add Transfer proposal/i }).click()
+    await waitForWalletApproval(page, "add_proposal Transfer")
+    const proposalTx = await recordedTx(page, sent, evidence.owner_account_id, "add_proposal")
+
+    const proposalId = await viewCall<number>(
+      context.request,
+      evidence.dao_id,
+      "get_last_proposal_id",
+    )
+    const before = await viewCall<{ status: string }>(
+      context.request,
+      evidence.dao_id,
+      "get_proposal",
+      { id: proposalId },
+    )
+
+    // B has no stake, so the gate must reject before any wallet approval.
+    await page.goto(`/dao/${evidence.dao_id}/proposals?ids=${proposalId}`)
+    await connectWalletForDemo(page, "B")
+    await page.getByRole("button", { name: /Approve exact kind/i }).click()
+    await expect(page.getByText(/Zero voting weight/i)).toBeVisible({ timeout: 60_000 })
+
+    const after = await viewCall<{ status: string }>(
+      context.request,
+      evidence.dao_id,
+      "get_proposal",
+      { id: proposalId },
+    )
+    expect(after.status).toBe(before.status)
+
+    saveEvidence({
+      ...loadEvidence(),
+      dao_fund_tx: fundTx,
+      transfer_proposal_tx: proposalTx,
+      proposal_id: proposalId,
+      proposal_status_before_approve: before.status,
+      zero_weight_rejected: true,
+      proposal_status_after_rejection: after.status,
+      receiver_balance_before: await nearBalance(context.request, receiver),
+    })
+  })
+
+  test("A's stake executes the Transfer and the receiver balance increases", async ({
+    page,
+    context,
+    evidence,
+  }) => {
+    skipUnlessGovernance()
+    const receiver = evidence?.receiver_account_id
+    if (!evidence?.dao_id || evidence.proposal_id === undefined || !receiver) {
+      throw new Error("The Transfer proposal must exist before approving it")
+    }
+    const proposalId = evidence.proposal_id
+    const before = await nearBalance(context.request, receiver)
+
+    const sent = recordSentTransactions(page)
+    await page.goto(`/dao/${evidence.dao_id}/proposals?ids=${proposalId}`)
+    await connectWalletForDemo(page, "A")
+    await page.getByRole("button", { name: /Approve exact kind/i }).click()
+    await waitForWalletApproval(page, "act_proposal VoteApprove")
+    const approveTx = await recordedTx(page, sent, evidence.owner_account_id, "act_proposal")
+
+    await expect
+      .poll(
+        async () =>
+          (
+            await viewCall<{ status: string }>(context.request, evidence.dao_id!, "get_proposal", {
+              id: proposalId,
+            })
+          ).status,
+        { timeout: 180_000 },
+      )
+      .toBe("Approved")
+
+    await expect
+      .poll(async () => BigInt(await nearBalance(context.request, receiver)), {
+        timeout: 180_000,
+      })
+      .toBeGreaterThan(BigInt(before))
+
+    saveEvidence({
+      ...loadEvidence(),
+      transfer_approve_tx: approveTx,
+      proposal_status_after_approve: "Approved",
+      receiver_balance_after: await nearBalance(context.request, receiver),
+    })
+  })
+})
