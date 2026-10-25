@@ -1,6 +1,7 @@
 import type React from "react"
 import type { Metadata } from "next"
 import "./globals.css"
+import "@near-wallet-selector/modal-ui/styles.css"
 
 export const metadata: Metadata = {
   title: "GroupVault",
