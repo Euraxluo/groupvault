@@ -78,12 +78,23 @@ export function GroupDetailsDialog({
               <Copy className="mr-1.5 h-3.5 w-3.5" />
               {copied ? "Copied" : "Group ID"}
             </Button>
+            <Button asChild size="sm" variant="outline">
+              <Link href={`/groups/${groupId}/join`}>Join wall</Link>
+            </Button>
+            <Button asChild size="sm" variant="outline">
+              <Link href={`/groups/${groupId}/convert`}>Convert</Link>
+            </Button>
             <Button asChild size="sm" className="col-span-2">
               <Link href={`/groups/${groupId}/chat`}>
                 <MessageSquareText className="mr-1.5 h-3.5 w-3.5" />
                 Open public chat
               </Link>
             </Button>
+            {group.dao_id ? (
+              <Button asChild size="sm" className="col-span-2" variant="secondary">
+                <Link href={`/dao/${group.dao_id}`}>Open DAO hub</Link>
+              </Button>
+            ) : null}
           </div>
         </DialogContent>
       </Dialog>

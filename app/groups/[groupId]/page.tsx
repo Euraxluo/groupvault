@@ -1,7 +1,13 @@
 "use client"
 
 import { use, useState } from "react"
-import { ArrowRight, MessageSquareText } from "lucide-react"
+import {
+  ArrowRight,
+  KeyRound,
+  MessageSquareText,
+  Coins,
+  Vote,
+} from "lucide-react"
 import Link from "next/link"
 
 import { GroupDetailsDialog } from "@/components/group-details-dialog"
@@ -12,6 +18,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { useGroupVault } from "@/hooks/use-group-vault"
+import { useNearWallet } from "@/hooks/use-near-wallet"
 
 export default function GroupPage({
   params,
@@ -21,6 +28,7 @@ export default function GroupPage({
   const { groupId: raw } = use(params)
   const groupId = Number(raw)
   const { group, members, loading, error } = useGroupVault(groupId)
+  const wallet = useNearWallet()
   const [detailsOpen, setDetailsOpen] = useState(false)
 
   if (loading) {
@@ -50,6 +58,11 @@ export default function GroupPage({
       </main>
     )
   }
+
+  const isOwner = wallet.accountId === group.owner
+  const isMember = Boolean(
+    wallet.accountId && members.includes(wallet.accountId),
+  )
 
   return (
     <main className="min-h-screen bg-background">
@@ -88,23 +101,53 @@ export default function GroupPage({
           </Card>
         </div>
 
-        <GroupJoinCard groupId={groupId} />
+        {!isMember ? <GroupJoinCard groupId={groupId} /> : null}
         <PrivacyNotice compact />
 
         <div className="grid gap-2 sm:grid-cols-2">
-          <Button asChild>
-            <Link href={`/groups/${groupId}/chat`}>
-              <MessageSquareText className="mr-2 h-4 w-4" /> Chat
-            </Link>
-          </Button>
+          {!isMember ? (
+            <Button asChild>
+              <Link href={`/groups/${groupId}/join`}>
+                <Coins className="mr-2 h-4 w-4" /> Paid join wall
+              </Link>
+            </Button>
+          ) : (
+            <Button asChild>
+              <Link href={`/groups/${groupId}/chat`}>
+                <MessageSquareText className="mr-2 h-4 w-4" /> Chat
+              </Link>
+            </Button>
+          )}
           <Button variant="outline" onClick={() => setDetailsOpen(true)}>
-            Details <ArrowRight className="ml-2 h-4 w-4" />
+            Details / roster <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
+          {isOwner && !group.dao_id ? (
+            <Button asChild>
+              <Link href={`/groups/${groupId}/convert`}>
+                <KeyRound className="mr-2 h-4 w-4" /> Convert to DAO
+              </Link>
+            </Button>
+          ) : null}
+          {group.dao_id ? (
+            <Button asChild>
+              <Link href={`/dao/${group.dao_id}`}>
+                <Vote className="mr-2 h-4 w-4" /> Open DAO hub
+              </Link>
+            </Button>
+          ) : null}
+          {isOwner && group.dao_id ? (
+            <Button asChild variant="outline">
+              <Link href={`/groups/${groupId}/convert`}>Convert status</Link>
+            </Button>
+          ) : null}
         </div>
 
         <p className="text-[11px] text-muted-foreground">
           Members on chain: {members.length} · DAO:{" "}
           <span className="font-mono">{group.dao_id ?? "not converted"}</span>
+          {!wallet.accountId
+            ? " · Connect a wallet to join, chat, or convert."
+            : null}
         </p>
       </div>
 

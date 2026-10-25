@@ -129,7 +129,7 @@ export function GroupTreasury({ daoId }: { daoId: string }) {
               Proposal{" "}
               <a
                 className="font-mono underline"
-                href={`/dao/${daoId}/proposals?ids=${votes.lastAddedId}`}
+                href={`/dao/${daoId}/proposals/${votes.lastAddedId}`}
               >
                 #{votes.lastAddedId}
               </a>{" "}
@@ -151,9 +151,11 @@ export function GroupTreasury({ daoId }: { daoId: string }) {
 }
 
 export function ProposalList({
+  daoId,
   proposals,
   onApprove,
 }: {
+  daoId: string
   proposals: Proposal[]
   onApprove: (proposal: Proposal) => Promise<void>
 }) {
@@ -163,15 +165,22 @@ export function ProposalList({
         <Card key={proposal.id} className="shadow-none">
           <CardContent className="space-y-2 p-4">
             <div className="flex items-start justify-between gap-2">
-              <p className="text-sm font-medium">{proposal.description}</p>
+              <p className="text-sm font-medium">
+                #{proposal.id} · {proposal.description}
+              </p>
               <Badge variant="outline">{proposal.status}</Badge>
             </div>
             <pre className="overflow-x-auto rounded bg-muted p-2 text-[10px]">
               {JSON.stringify(proposal.kind, null, 2)}
             </pre>
-            <Button size="sm" onClick={() => void onApprove(proposal)}>
-              Approve exact kind
-            </Button>
+            <div className="grid grid-cols-2 gap-2">
+              <Button size="sm" onClick={() => void onApprove(proposal)}>
+                Approve exact kind
+              </Button>
+              <Button asChild size="sm" variant="outline">
+                <a href={`/dao/${daoId}/proposals/${proposal.id}`}>Details</a>
+              </Button>
+            </div>
           </CardContent>
         </Card>
       ))}

@@ -8,6 +8,7 @@ import { ProposalList } from "@/components/group-treasury"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useVotes } from "@/hooks/use-votes"
+import { DEMO_STORY } from "@/lib/demo-story"
 
 export default function ProposalsPage({
   params,
@@ -20,7 +21,13 @@ export default function ProposalsPage({
     .split(",")
     .map((value) => Number(value.trim()))
     .filter((value) => Number.isSafeInteger(value) && value >= 0)
-  const [ids, setIds] = useState<number[]>(requestedIds)
+  const seed =
+    requestedIds.length > 0
+      ? requestedIds
+      : daoId === DEMO_STORY.daoId
+        ? [...DEMO_STORY.proposalIds]
+        : []
+  const [ids, setIds] = useState<number[]>(seed)
   const [candidate, setCandidate] = useState("")
   const votes = useVotes(daoId, ids)
 
@@ -53,7 +60,7 @@ export default function ProposalsPage({
           </Button>
         </div>
         {votes.error ? <p className="text-xs text-destructive">{votes.error}</p> : null}
-        <ProposalList proposals={votes.proposals} onApprove={votes.approve} />
+        <ProposalList daoId={daoId} proposals={votes.proposals} onApprove={votes.approve} />
       </div>
     </main>
   )

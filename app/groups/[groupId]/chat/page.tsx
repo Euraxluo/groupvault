@@ -24,6 +24,7 @@ export default function GroupChatPage({
             <ArrowLeft className="mr-1.5 h-4 w-4" /> Group overview
           </Link>
         </Button>
+        <h1 className="mb-3 text-2xl font-bold tracking-tight">Group chat</h1>
         <GroupChat groupId={Number(groupId)} />
       </div>
     </main>

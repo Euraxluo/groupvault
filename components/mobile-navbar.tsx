@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { MessageSquareText, Users, Vote, Wallet } from "lucide-react"
+import { Inbox, MessageSquareText, Users, Vote, Wallet } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 
@@ -14,6 +14,7 @@ const navigation = [
   { href: "/groups", label: "Groups", icon: Users },
   { href: "/chat", label: "Chat", icon: MessageSquareText },
   { href: "/dao", label: "DAO", icon: Vote },
+  { href: "/inbox", label: "Inbox", icon: Inbox },
 ]
 
 export function MobileNavbar() {
@@ -32,20 +33,38 @@ export function MobileNavbar() {
             <span className="text-sm font-bold tracking-tight">GroupVault</span>
           </Link>
 
-          <Button
-            id="btn-nav-wallet"
-            variant="outline"
-            size="sm"
-            className="h-8 rounded-full px-3 text-xs"
-            onClick={() => setWalletOpen(true)}
-          >
-            <Wallet className="mr-1.5 h-3.5 w-3.5" />
-            {wallet.accountId ? shortAccount(wallet.accountId) : "Connect"}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              asChild
+              variant="ghost"
+              size="sm"
+              className="hidden h-8 rounded-full px-2 text-[11px] sm:inline-flex"
+            >
+              <Link href="/demo">Demo</Link>
+            </Button>
+            <Button
+              asChild
+              variant="ghost"
+              size="sm"
+              className="hidden h-8 rounded-full px-2 text-[11px] sm:inline-flex"
+            >
+              <Link href="/me/qr">QR</Link>
+            </Button>
+            <Button
+              id="btn-nav-wallet"
+              variant="outline"
+              size="sm"
+              className="h-8 rounded-full px-3 text-xs"
+              onClick={() => setWalletOpen(true)}
+            >
+              <Wallet className="mr-1.5 h-3.5 w-3.5" />
+              {wallet.accountId ? shortAccount(wallet.accountId) : "Connect"}
+            </Button>
+          </div>
         </div>
       </header>
 
-      <nav className="fixed inset-x-0 bottom-0 z-40 flex justify-around border-t border-border/60 bg-background/95 px-2 py-1 backdrop-blur-md md:bottom-3 md:left-1/2 md:max-w-md md:-translate-x-1/2 md:rounded-2xl md:border md:shadow-lg">
+      <nav className="fixed inset-x-0 bottom-0 z-40 flex justify-around border-t border-border/60 bg-background/95 px-1 py-1 backdrop-blur-md md:bottom-3 md:left-1/2 md:max-w-md md:-translate-x-1/2 md:rounded-2xl md:border md:shadow-lg">
         {navigation.map(({ href, label, icon: Icon }) => {
           const active =
             pathname === href || (pathname?.startsWith(`${href}/`) ?? false)
@@ -54,7 +73,7 @@ export function MobileNavbar() {
               key={href}
               href={href}
               className={cn(
-                "flex flex-col items-center gap-0.5 rounded-lg px-3 py-1.5 text-[10px]",
+                "flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-lg px-1 py-1.5 text-[10px]",
                 active ? "text-primary" : "text-muted-foreground",
               )}
             >

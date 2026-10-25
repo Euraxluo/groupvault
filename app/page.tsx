@@ -9,6 +9,7 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 
+import { DemoStoryRail } from "@/components/demo-story-rail"
 import { MobileNavbar } from "@/components/mobile-navbar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -82,9 +83,16 @@ export default function Home() {
                 asChild
                 className="h-11 rounded-full bg-[#17211a] px-6 text-[#f8f4e9] hover:bg-[#2b3a2e]"
               >
-                <Link href="/groups">
-                  Open groups <ArrowRight className="ml-1 h-4 w-4" />
+                <Link href="/demo">
+                  Demo story <ArrowRight className="ml-1 h-4 w-4" />
                 </Link>
+              </Button>
+              <Button
+                asChild
+                variant="outline"
+                className="h-11 rounded-full border-[#17211a]/25 bg-transparent px-6"
+              >
+                <Link href="/groups">Open groups</Link>
               </Button>
               <span className="flex items-center gap-2 rounded-full border border-[#17211a]/20 px-4 py-2.5 text-xs font-medium text-[#17211a]/65">
                 <ShieldCheck className="h-4 w-4" />
@@ -131,6 +139,10 @@ export default function Home() {
               staking the same join FT after the DAO exists.
             </p>
           </aside>
+        </section>
+
+        <section className="relative mb-10 rounded-[1.5rem] border border-[#17211a]/10 bg-white/70 p-4 sm:p-5">
+          <DemoStoryRail compact />
         </section>
 
         <section className="relative pb-10">

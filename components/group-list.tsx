@@ -24,14 +24,27 @@ export function GroupList() {
       setLoading(false)
       return
     }
-    if (!session) return
+    if (!session) {
+      // Wallet selector boots async; keep the loading copy until it is ready.
+      return
+    }
+    let cancelled = false
     createGroupVaultClient(session.selector, new NearRpc(config), config.groupVaultContractId)
       .getGroups(0, 50)
-      .then(setGroups)
-      .catch((reason: unknown) =>
-        setError(reason instanceof Error ? reason.message : String(reason)),
-      )
-      .finally(() => setLoading(false))
+      .then((next) => {
+        if (!cancelled) setGroups(next)
+      })
+      .catch((reason: unknown) => {
+        if (!cancelled) {
+          setError(reason instanceof Error ? reason.message : String(reason))
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
   }, [session])
 
   if (loading) return <p className="text-sm text-muted-foreground">Reading groups…</p>
@@ -63,10 +76,10 @@ export function GroupList() {
                 </Badge>
               </div>
             </CardHeader>
-            <CardContent className="flex items-center justify-between p-4 pt-2 text-xs text-muted-foreground">
+            <CardContent className="flex items-center justify-between gap-2 p-4 pt-2 text-xs text-muted-foreground">
               <span className="flex items-center gap-1">
                 <Users className="h-3.5 w-3.5" />
-                {group.member_count} members
+                {group.member_count} members · fee {group.join_fee}
               </span>
               <span className="flex items-center gap-1 text-primary">
                 Open <ArrowRight className="h-3 w-3" />

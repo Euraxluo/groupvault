@@ -1,7 +1,14 @@
 "use client"
 
 import { use } from "react"
-import { ArrowRight, Coins, KeyRound, ShieldCheck, Vote } from "lucide-react"
+import {
+  ArrowRight,
+  Coins,
+  Inbox,
+  KeyRound,
+  ShieldCheck,
+  Vote,
+} from "lucide-react"
 import Link from "next/link"
 
 import { MobileNavbar } from "@/components/mobile-navbar"
@@ -9,6 +16,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useDao } from "@/hooks/use-dao"
+import { DEMO_STORY } from "@/lib/demo-story"
 
 export default function DaoOverviewPage({
   params,
@@ -17,6 +25,7 @@ export default function DaoOverviewPage({
 }) {
   const { daoId } = use(params)
   const dao = useDao(daoId)
+  const proposalQuery = DEMO_STORY.proposalIds.join(",")
 
   return (
     <main className="min-h-screen bg-background">
@@ -86,8 +95,23 @@ export default function DaoOverviewPage({
             </Link>
           </Button>
           <Button asChild variant="outline">
+            <Link href={`/dao/${daoId}/stake`}>
+              <Coins className="mr-2 h-4 w-4" /> Stake / delegate
+            </Link>
+          </Button>
+          <Button asChild variant="outline">
             <Link href={`/dao/${daoId}/treasury`}>
-              Treasury and proposals <ArrowRight className="ml-2 h-4 w-4" />
+              Treasury and Transfer <ArrowRight className="ml-2 h-4 w-4" />
+            </Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link href={`/dao/${daoId}/proposals?ids=${proposalQuery}`}>
+              <Vote className="mr-2 h-4 w-4" /> Proposals
+            </Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link href="/inbox">
+              <Inbox className="mr-2 h-4 w-4" /> Inbox
             </Link>
           </Button>
         </div>
