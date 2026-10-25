@@ -47,17 +47,25 @@ export function useConvert(groupId: number): ConvertState {
       setError("GroupVault contract is not configured yet.")
       return
     }
-    try {
-      const client = createGroupVaultClient(
-        session.selector,
-        new NearRpc(config),
-        config.groupVaultContractId,
-      )
-      setGroup(await client.getGroup(groupId))
-      setError(null)
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : String(reason))
+    let lastError: unknown
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      try {
+        const client = createGroupVaultClient(
+          session.selector,
+          new NearRpc(config),
+          config.groupVaultContractId,
+        )
+        setGroup(await client.getGroup(groupId))
+        setError(null)
+        return
+      } catch (reason) {
+        lastError = reason
+        const msg = String(reason)
+        if (!/429|Rate limit|Exceeded|fetch failed|timeout/i.test(msg)) break
+        await new Promise((resolve) => setTimeout(resolve, 1200 * (attempt + 1)))
+      }
     }
+    setError(lastError instanceof Error ? lastError.message : String(lastError))
   }, [session, groupId])
 
   useEffect(() => {

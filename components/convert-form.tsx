@@ -142,10 +142,23 @@ export function ConvertForm({
                 />
               </div>
               {convert.reason ? (
-                <p className="flex items-start gap-2 rounded-lg bg-muted p-3 text-xs text-muted-foreground">
-                  <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />
-                  {convert.reason}
-                </p>
+                <div className="space-y-2 rounded-lg bg-muted p-3">
+                  <p className="flex items-start gap-2 text-xs text-muted-foreground">
+                    <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />
+                    {convert.reason}
+                  </p>
+                  {!convert.group ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="h-10 min-h-10 w-full rounded-xl"
+                      onClick={() => void convert.refresh()}
+                    >
+                      Retry load
+                    </Button>
+                  ) : null}
+                </div>
               ) : null}
               {localError || convert.error ? (
                 <p className="text-xs text-destructive">

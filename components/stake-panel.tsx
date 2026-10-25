@@ -50,7 +50,19 @@ export function StakePanel({ daoId }: { daoId: string }) {
   }
 
   if (dao.loading) {
-    return <p className="text-sm text-muted-foreground">Loading DAO…</p>
+    return (
+      <div className="space-y-2 rounded-xl border border-dashed p-4">
+        <p className="text-sm text-muted-foreground">Loading DAO…</p>
+        {dao.error ? (
+          <>
+            <p className="text-xs text-destructive">{dao.error}</p>
+            <Button size="sm" variant="outline" className="h-10 min-h-10 w-full rounded-xl" onClick={() => void dao.refresh()}>
+              Retry
+            </Button>
+          </>
+        ) : null}
+      </div>
+    )
   }
 
   if (dao.error) {
@@ -60,9 +72,17 @@ export function StakePanel({ daoId }: { daoId: string }) {
           <p className="font-medium">Could not read DAO staking state</p>
           <p className="text-xs text-destructive">{dao.error}</p>
           <p className="text-[11px] text-muted-foreground">
-            Usually RPC rate-limit or a missing wallet session. Retry after
-            Connect, or switch NEXT_PUBLIC_NEAR_RPC_URL.
+            Usually RPC rate-limit or a missing wallet session. This is a load
+            error — not proof that staking is unset.
           </p>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-10 min-h-10 w-full rounded-xl"
+            onClick={() => void dao.refresh()}
+          >
+            Retry
+          </Button>
         </CardContent>
       </Card>
     )

@@ -31,9 +31,8 @@ function rpcUrls(primary: string): string[] {
     new Set(
       [
         primary,
-        "https://test.rpc.fastnear.com",
         "https://rpc.testnet.near.org",
-        "https://testnet.near.lavanet.xyz",
+        "https://test.rpc.fastnear.com",
       ].filter(Boolean),
     ),
   )

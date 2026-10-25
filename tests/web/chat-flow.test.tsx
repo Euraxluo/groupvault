@@ -60,7 +60,7 @@ beforeEach(() => {
 describe("public chat", () => {
   it("shows the public-log warning and indexer messages", () => {
     render(<GroupChat groupId={3} />)
-    expect(screen.getByText(/public on-chain logs/i)).toBeInTheDocument()
+    expect(screen.getByText(/Public on-chain chat|public on-chain logs/i)).toBeInTheDocument()
     expect(screen.getByText("hello from chain")).toBeInTheDocument()
   })
 

@@ -68,9 +68,8 @@ export async function getDemoAccount(
     new Set(
       [
         config.rpcUrl,
-        "https://test.rpc.fastnear.com",
         "https://rpc.testnet.near.org",
-        "https://testnet.near.lavanet.xyz",
+        "https://test.rpc.fastnear.com",
         "https://near-testnet.api.pagoda.co/rpc/v1",
       ].filter(Boolean),
     ),

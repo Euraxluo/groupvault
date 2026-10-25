@@ -69,9 +69,28 @@ export function useGroupMessages(groupId: number): GroupMessagesState {
       setError(null)
       try {
         await client.sendMessage(accountId, groupId, text)
+        // Optimistic local bubble immediately after chain accept.
+        const pendingId = `pending:${accountId}:${Date.now()}`
+        setMessages((prev) => {
+          if (prev.some((message) => message.sender === accountId && message.text === text)) {
+            return prev
+          }
+          return [
+            ...prev,
+            {
+              group_id: groupId,
+              sender: accountId,
+              text,
+              ts: `${Date.now()}000000`,
+              receipt_id: pendingId,
+              block_height: 0,
+              log_index: 0,
+            },
+          ]
+        })
+        setIndexing(true)
         // Wait briefly for the finalized log to reach the indexer. If it has
-        // not arrived, still surface the chain-accepted message locally so the
-        // sender is not blocked by indexer lag, and keep the indexing badge on.
+        // not arrived, keep the optimistic bubble and the indexing badge.
         const config = getNearConfig()
         for (let attempt = 0; attempt < 10; attempt += 1) {
           const page = await getMessages(config.indexerUrl, groupId)

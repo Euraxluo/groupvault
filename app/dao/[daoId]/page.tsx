@@ -39,9 +39,19 @@ export default function DaoOverviewPage({
         </div>
 
         {dao.error ? (
-          <p className="rounded-lg bg-destructive/10 p-3 text-xs text-destructive">
-            {dao.error}
-          </p>
+          <div className="space-y-2 rounded-xl border border-destructive/30 bg-destructive/10 p-3">
+            <p className="text-sm text-destructive">RPC / load failed</p>
+            <p className="break-words text-[11px] text-destructive/90">{dao.error}</p>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-10 min-h-10 w-full rounded-xl"
+              onClick={() => void dao.refresh()}
+            >
+              Retry
+            </Button>
+          </div>
         ) : null}
 
         <div className="grid grid-cols-2 gap-3">
@@ -52,7 +62,7 @@ export default function DaoOverviewPage({
                 Vote policy
               </p>
               <p className="text-sm font-bold">
-                {dao.policy?.default_vote_policy.weight_kind ?? "Loading…"}
+                {dao.error ? "—" : (dao.policy?.default_vote_policy.weight_kind ?? (dao.loading ? "Loading…" : "—"))}
               </p>
             </CardContent>
           </Card>
@@ -75,15 +85,37 @@ export default function DaoOverviewPage({
           </CardHeader>
           <CardContent className="space-y-2 p-4 pt-0 text-xs">
             <p className="text-muted-foreground">
-              {dao.stakingContract
-                ? "Staking is set. Voting weight comes only from the join FT."
-                : "Staking is not set yet. The council must approve SetStakingContract first."}
+              {dao.error
+                ? "Could not load staking status (RPC). Retry above — do not treat this as unset."
+                : dao.loading
+                  ? "Loading staking contract…"
+                  : dao.stakingContract
+                    ? "Staking is set. Voting weight comes only from the join FT."
+                    : "Staking is not set yet. The council must approve SetStakingContract first."}
             </p>
             <p className="break-all font-mono">
-              {dao.stakingContract ?? "not set"}
+              {dao.error
+                ? "status unknown"
+                : dao.loading
+                  ? "…"
+                  : (dao.stakingContract ?? "not set")}
             </p>
-            <Badge variant={dao.stakingContract ? "default" : "secondary"}>
-              {dao.stakingContract ? "Ready" : "Setup required"}
+            <Badge
+              variant={
+                dao.error || dao.loading
+                  ? "outline"
+                  : dao.stakingContract
+                    ? "default"
+                    : "secondary"
+              }
+            >
+              {dao.error
+                ? "Load error"
+                : dao.loading
+                  ? "Loading"
+                  : dao.stakingContract
+                    ? "Ready"
+                    : "Setup required"}
             </Badge>
           </CardContent>
         </Card>

@@ -1,33 +1,30 @@
 # Mobile 3-account storyboard
 
-Generated: 2026-10-25 (Asia/Shanghai)
+Updated: 2026-10-25 ~10:17 Asia/Shanghai
 
 ## Accounts
-- **A (owner / Tab A):** `gv-a-1024-210252.testnet`
-- **B (member1 / Tab B):** `gv-b-1024-210252.testnet`
-- **C (member2 / Tab C):** `gv-topup-mvmi9vo1.testnet` (alias note in `~/.near-credentials/testnet/gv-c-mobile-3acct.testnet.json` if written)
+- **A:** `gv-a-1024-210252.testnet` (~1.36 NEAR)
+- **B:** `gv-b-1024-210252.testnet`
+- **C:** `gv-topup-mvmi9vo1.testnet` (**member of group 14**)
 
-## Group
-- **Fresh group 14** (`Mobile3 5oip0`) — A created; B joined; C join blocked by RPC 429 after NEAR top-up
-- **DAO visuals:** group **13** / `groupvault-13.sputnikv2.testnet` (frames 32–35) — already converted TokenWeight path from prior verified run
-- Group 14 convert not confirmed on-chain this run (RPC)
+## Group 14 (`Mobile3 5oip0`)
+- **fresh create** earlier; members: A, B, **C** (C joined on-chain with correct `{"action":"join","group_id":14}` msg)
+- C `send_message` on-chain + UI send (optimistic bubble)
+- **Convert:** attempted in UI; **not completed**
+  - Contract `CONVERT_DEPOSIT` = **10 NEAR**; A has ~**1.36 NEAR**
+  - Testnet faucet unreachable from this host (`rpc.testnet.near.org` connect timeout; near-cli `--useFaucet` fails)
+  - Broadcast also stalls under fastnear 429 ("Waiting for wallet…")
+- **DAO visuals:** still use group **13** frames for TokenWeight story
+
+## RPC note
+- Tried `https://rpc.testnet.near.org` (times out here), Pagoda deprecated/403, Lava gone
+- App/indexer back on `https://test.rpc.fastnear.com` with failover + 429 backoff
+- `.env.local` documents this
 
 ## Viewport
-- iPhone 14 · 390×844 · isMobile · hasTouch · deviceScaleFactor 2
-- Screenshots: `fullPage: false` (phone frame only)
+- 390×844 · isMobile · hasTouch · `fullPage: false`
 
-## Click path (real)
-### OK
-- A create_group → group 14
-- A send_message
-- A convert attempted (UI)
-- B join → member
-- B send
-- C connect + join attempted
-### Blocked
-- A convert broadcast / C join confirm — fastnear **HTTP 429** (and C briefly under-funded before +0.25N top-up)
-
-## Frames (34)
+## Frames (46)
 - `00-smoke-chat-disconnected.png`
 - `00-smoke-home.png`
 - `01-A-home.png`
@@ -62,6 +59,18 @@ Generated: 2026-10-25 (Asia/Shanghai)
 - `36-A-g14-convert.png`
 - `37-C-g14-join.png`
 - `38-C-g14-chat.png`
+- `39-C-join-success.png`
+- `40-C-chat-member.png`
+- `41-C-chat-sent-optimistic.png`
+- `42-A-convert-predao.png`
+- `43-A-convert-blocked.png`
+- `43-A-convert-disabled.png`
+- `43-A-convert-result.png`
+- `44-A-g14-overview.png`
+- `45-A-chat-sees-C.png`
+- `46-B-roster-tip.png`
+- `48-A-dao13-retry-ux.png`
+- `49-A-convert-deposit-note.png`
 
 ## Review
-See `REVIEW.md` for PASS/FAIL per frame and UI fixes.
+See `REVIEW.md`.

@@ -49,3 +49,27 @@ North-star: NearDao web3-app refs (`~/project/groupvault-assets/neardao-web3-app
 - Stake/DAO hub empty/loading under RPC failure should surface a retry banner (not “not set”).
 - Home quick-action still deep-links demo group 13 by design; group 14 is the fresh 3-actor path.
 - Prefer dedicated `INDEXER_RPC_URL` / paid RPC for unattended demos.
+
+## Continuation 2026-10-25 10:17 CST
+
+### Chain
+| Step | Result |
+| --- | --- |
+| C join group 14 | **PASS** — member; FT msg must include `action:"join"` |
+| C chat message | **PASS** — on-chain + UI; optimistic "sent · waiting for indexer" |
+| A Convert group 14 | **BLOCKED** — needs **10 NEAR** deposit; A≈1.36N; faucet unreachable; RPC 429 stalls signer |
+
+### New / updated frames
+| Frame | Verdict | Notes |
+| --- | --- | --- |
+| `39-C-join-success` | **PASS** | "You are a member of this group." |
+| `40-C-chat-member` | **PASS** | Composer; 3 members; Chat tab active; privacy one-liner |
+| `41-C-chat-sent-optimistic` | **PASS** | Dashed bubble + "sent · waiting for indexer" |
+| `42-A-convert-predao` | **PASS** layout | Form loads after Retry; deposit shown |
+| `43-A-convert-result` | **FAIL** chain | Stuck "Waiting for wallet…" / cannot fund 10N |
+| `44-A-g14-overview`–`48-A-dao13-retry-ux` | **PASS** UX | Overview/chat/roster/DAO retry polish |
+
+### Soft UX this round
+- Privacy banner: compact collapsible one-liner
+- Chat: immediate optimistic pending bubble label
+- DAO hub + stake panel + convert: Retry on load/RPC fail; do not claim staking unset on error

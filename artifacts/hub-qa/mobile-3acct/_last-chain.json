@@ -1,0 +1,25 @@
+{
+  "groupId": 14,
+  "members": [
+    "gv-a-1024-210252.testnet",
+    "gv-b-1024-210252.testnet",
+    "gv-topup-mvmi9vo1.testnet"
+  ],
+  "cMessage": "C mobile joined #14 1792894354543",
+  "aNear": 1.3602021568070979,
+  "convertDepositNeededNear": 10,
+  "group": {
+    "id": 14,
+    "owner": "gv-a-1024-210252.testnet",
+    "name": "Mobile3 5oip0",
+    "description": "",
+    "join_fee": "1000000",
+    "join_ft": "gv-deployer-1024-204559-ft.testnet",
+    "member_count": 3,
+    "dao_id": null,
+    "convert_pending": false,
+    "created_at": 1792892129002154200
+  },
+  "convertBlockedReason": "A has 1.3602 NEAR; CONVERT_DEPOSIT is 10 NEAR. Faucet unreachable (rpc.testnet.near.org timeout).",
+  "at": "2026-10-25T02:13:35.020Z"
+}
