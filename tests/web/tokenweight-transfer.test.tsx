@@ -148,7 +148,7 @@ describe("TokenWeight approval gate", () => {
   it("renders the exact proposal kind in the approval UI", async () => {
     const { ProposalList } = await import("@/components/group-treasury")
     render(
-      <ProposalList proposals={[proposal]} onApprove={vi.fn()} />,
+      <ProposalList daoId="dao.testnet" proposals={[proposal]} onApprove={vi.fn()} />,
     )
     expect(screen.getByText(/Pay Bob/)).toBeInTheDocument()
     expect(screen.getByText(/"token_id": ""/)).toBeInTheDocument()
