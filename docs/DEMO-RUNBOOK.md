@@ -64,6 +64,14 @@ injects credentials from `DEMO_PRIVATE_KEY_A/B` or `~/.near-credentials` and
 never writes a key into the repo or evidence file. MyNearWallet remains the
 default product path.
 
+## 3b. Demo story rail (UI click-through)
+
+Open `http://127.0.0.1:3100/demo` for the ordered product surfaces. Deep links
+use the verified anchors in `artifacts/demo-input.json` (group 13 / DAO
+`groupvault-13.sputnikv2.testnet`). Prefer **Keypair (demo)** for unattended
+browser proof; MyNearWallet remains the product default. Frontend port **3100**
+(3000 is often Metabase on this host).
+
 ## 4. Product path
 
 | Step | User | Expected evidence |
