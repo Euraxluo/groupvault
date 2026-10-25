@@ -1,7 +1,7 @@
 use near_sdk::{ext_contract, AccountId, Gas, NearToken};
 use serde_json::{json, Value};
 
-pub const CONVERT_DEPOSIT: NearToken = NearToken::from_near(10);
+pub const CONVERT_DEPOSIT: NearToken = NearToken::from_near(5);
 pub const GAS_FOR_FACTORY_CALL: Gas = Gas::from_tgas(100);
 pub const GAS_FOR_CONVERT_CALLBACK: Gas = Gas::from_tgas(20);
 

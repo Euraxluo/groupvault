@@ -44,7 +44,7 @@ async fn second_convert_after_success_is_rejected() -> anyhow::Result<()> {
             "dao_name": "race",
             "purpose": "",
         }))
-        .deposit(NearToken::from_near(10))
+        .deposit(NearToken::from_near(5))
         .max_gas()
         .transact()
         .await?
@@ -57,7 +57,7 @@ async fn second_convert_after_success_is_rejected() -> anyhow::Result<()> {
             "dao_name": "race",
             "purpose": "",
         }))
-        .deposit(NearToken::from_near(10))
+        .deposit(NearToken::from_near(5))
         .max_gas()
         .transact()
         .await?;
@@ -86,7 +86,7 @@ async fn concurrent_convert_in_same_block_rejects_one() -> anyhow::Result<()> {
             "dao_name": "race",
             "purpose": "",
         }))
-        .deposit(NearToken::from_near(10))
+        .deposit(NearToken::from_near(5))
         .max_gas()
         .transact();
     let second = owner
@@ -96,7 +96,7 @@ async fn concurrent_convert_in_same_block_rejects_one() -> anyhow::Result<()> {
             "dao_name": "race",
             "purpose": "",
         }))
-        .deposit(NearToken::from_near(10))
+        .deposit(NearToken::from_near(5))
         .max_gas()
         .transact();
 

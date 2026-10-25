@@ -34,7 +34,7 @@ async fn convert_calls_factory_once_and_writes_dao_id_after_true() -> anyhow::Re
             "dao_name": "builders",
             "purpose": "paid group",
         }))
-        .deposit(NearToken::from_near(10))
+        .deposit(NearToken::from_near(5))
         .max_gas()
         .transact()
         .await?;
@@ -76,7 +76,7 @@ async fn convert_calls_factory_once_and_writes_dao_id_after_true() -> anyhow::Re
     assert_eq!(call["predecessor"], contract.id().as_str());
     assert_eq!(
         call["deposit"],
-        NearToken::from_near(10).as_yoctonear().to_string()
+        NearToken::from_near(5).as_yoctonear().to_string()
     );
 
     let inner = near_sdk::base64::engine::general_purpose::STANDARD
@@ -126,7 +126,7 @@ async fn convert_accepts_unit_payload_from_real_style_factory() -> anyhow::Resul
             "dao_name": "builders",
             "purpose": "paid group",
         }))
-        .deposit(NearToken::from_near(10))
+        .deposit(NearToken::from_near(5))
         .max_gas()
         .transact()
         .await?
@@ -192,7 +192,7 @@ async fn non_owner_cannot_convert() -> anyhow::Result<()> {
             "dao_name": "builders",
             "purpose": "",
         }))
-        .deposit(NearToken::from_near(10))
+        .deposit(NearToken::from_near(5))
         .max_gas()
         .transact()
         .await?;
@@ -284,7 +284,7 @@ async fn invalid_dao_name_is_rejected_before_factory_call() -> anyhow::Result<()
             "dao_name": "Bad.Name",
             "purpose": "",
         }))
-        .deposit(NearToken::from_near(10))
+        .deposit(NearToken::from_near(5))
         .max_gas()
         .transact()
         .await?;
@@ -352,7 +352,7 @@ async fn convert_does_not_sweep_join_fees_into_the_dao() -> anyhow::Result<()> {
             "dao_name": "fees-stay",
             "purpose": "",
         }))
-        .deposit(NearToken::from_near(10))
+        .deposit(NearToken::from_near(5))
         .max_gas()
         .transact()
         .await?

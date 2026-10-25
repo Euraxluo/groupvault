@@ -36,11 +36,11 @@ transaction path.
 
 ## Convert sequence
 
-1. Owner signs `convert_to_dao` with at least 10 NEAR.
+1. Owner signs `convert_to_dao` with at least 5 NEAR.
 2. GroupVault validates owner, `dao_id == null`, and `convert_pending == false`.
 3. GroupVault sets `convert_pending = true` and snapshots at most 50 members.
 4. GroupVault calls `sputnikv2.testnet.create` with a base64 policy payload and
-   exactly 10 NEAR.
+   exactly 5 NEAR.
 5. The private callback requires a successful promise and factory boolean
    `true`; only then writes `dao_id`.
 6. A false/failed/malformed result clears pending and leaves `dao_id = null`,

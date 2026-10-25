@@ -65,6 +65,6 @@ impl TestFactory {
     }
 
     pub fn min_deposit(&self) -> NearToken {
-        NearToken::from_near(10)
+        NearToken::from_near(5)
     }
 }

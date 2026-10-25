@@ -149,7 +149,7 @@ convert_to_dao(group_id: u64, dao_name: String, purpose: String)
 - Sets `convert_pending = true` before the cross-contract call.
 - Snapshots at most 50 current members and passes them as the factory policy
   array.
-- Calls `sputnikv2.testnet.create` with 10 NEAR for the P0 runbook:
+- Calls `sputnikv2.testnet.create` with 5 NEAR for the P0 runbook:
 
 ```json
 {

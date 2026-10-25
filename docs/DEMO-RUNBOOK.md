@@ -146,7 +146,7 @@ pnpm e2e:testnet -- --project=chromium tests/e2e/demo.spec.ts
 
 Playwright starts the web app and the indexer and fails the run if any step did
 not really happen. Chat is asserted against both the rendered message and the
-indexer API. A requires ~10 NEAR for the Convert deposit plus gas; B needs the
+indexer API. A requires ~5 NEAR for the Convert deposit plus gas; B needs the
 join-FT balance.
 
 Playwright requires a real wallet approval for testnet flows. A rejection or

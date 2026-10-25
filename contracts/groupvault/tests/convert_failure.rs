@@ -44,7 +44,7 @@ async fn run_convert(mode: &str) -> anyhow::Result<(near_workspaces::Contract, u
             "dao_name": "builders",
             "purpose": "paid group",
         }))
-        .deposit(NearToken::from_near(10))
+        .deposit(NearToken::from_near(5))
         .max_gas()
         .transact()
         .await?
@@ -121,7 +121,7 @@ async fn retry_after_failure_is_allowed() -> anyhow::Result<()> {
                 "dao_name": "retry",
                 "purpose": "",
             }))
-            .deposit(NearToken::from_near(10))
+            .deposit(NearToken::from_near(5))
             .max_gas()
             .transact()
             .await?
@@ -143,7 +143,7 @@ async fn retry_after_failure_is_allowed() -> anyhow::Result<()> {
             "dao_name": "retry",
             "purpose": "",
         }))
-        .deposit(NearToken::from_near(10))
+        .deposit(NearToken::from_near(5))
         .max_gas()
         .transact()
         .await?
