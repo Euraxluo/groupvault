@@ -153,7 +153,7 @@ export function ConvertForm({
                 </p>
               ) : null}
               <Button
-                className="w-full"
+                className="h-12 min-h-12 w-full rounded-xl text-base"
                 disabled={!convert.canConvert || convert.submitting}
                 onClick={submit}
               >

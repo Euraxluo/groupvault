@@ -11,16 +11,20 @@ export interface DemoCredential {
   privateKey: string
 }
 
-export function isDemoKeypairEnvSet(who: "A" | "B" | "any" = "any"): boolean {
+export function isDemoKeypairEnvSet(who: "A" | "B" | "C" | "any" = "any"): boolean {
   if (who === "any") {
     return Boolean(
       process.env.DEMO_PRIVATE_KEY_A ||
         process.env.DEMO_PRIVATE_KEY_B ||
+        process.env.DEMO_PRIVATE_KEY_C ||
         process.env.DEMO_PRIVATE_KEY,
     )
   }
   if (who === "A") {
     return Boolean(process.env.DEMO_PRIVATE_KEY_A || process.env.DEMO_PRIVATE_KEY)
+  }
+  if (who === "C") {
+    return Boolean(process.env.DEMO_PRIVATE_KEY_C)
   }
   return Boolean(process.env.DEMO_PRIVATE_KEY_B)
 }
@@ -33,9 +37,15 @@ function credentialPath(accountId: string): string {
  * Resolve A/B credentials from env, falling back to ~/.near-credentials.
  * Keys are read only in the Playwright process — never committed.
  */
-export function loadDemoCredential(who: "A" | "B"): DemoCredential {
-  const accountEnv = who === "A" ? "DEMO_ACCOUNT_A" : "DEMO_ACCOUNT_B"
-  const keyEnv = who === "A" ? "DEMO_PRIVATE_KEY_A" : "DEMO_PRIVATE_KEY_B"
+export function loadDemoCredential(who: "A" | "B" | "C"): DemoCredential {
+  const accountEnv =
+    who === "A" ? "DEMO_ACCOUNT_A" : who === "B" ? "DEMO_ACCOUNT_B" : "DEMO_ACCOUNT_C"
+  const keyEnv =
+    who === "A"
+      ? "DEMO_PRIVATE_KEY_A"
+      : who === "B"
+        ? "DEMO_PRIVATE_KEY_B"
+        : "DEMO_PRIVATE_KEY_C"
   const accountId =
     process.env[accountEnv] ??
     (who === "A" ? process.env.DEMO_ACCOUNT_ID : undefined)
@@ -168,7 +178,7 @@ async function isAccountChipVisible(page: Page, accountId?: string): Promise<boo
 
 export async function connectDemoKeypair(
   page: Page,
-  who: "A" | "B" = "A",
+  who: "A" | "B" | "C" = "A",
 ): Promise<void> {
   const credentials = loadDemoCredential(who)
   await injectDemoKeypair(page, credentials)
@@ -244,7 +254,7 @@ export async function connectMyNearWallet(page: Page): Promise<void> {
  */
 export async function connectWalletForDemo(
   page: Page,
-  who: "A" | "B" = "A",
+  who: "A" | "B" | "C" = "A",
 ): Promise<void> {
   if (isDemoKeypairEnvSet(who) || process.env.DEMO_KEYPAIR_MODE === "1") {
     // DEMO_KEYPAIR_MODE=1 with only credential files still works via loadDemoCredential.

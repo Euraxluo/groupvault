@@ -30,9 +30,8 @@ export function DemoStoryRail({
             Connect → group → Convert → stake → Transfer
           </h2>
           <p className="mt-1 text-xs text-muted-foreground">
-            Deep-links use group {DEMO_STORY.groupId} /{" "}
-            <span className="font-mono">{DEMO_STORY.daoId}</span>. Create fresh
-            if you need a new path.
+            Deep-links use group {DEMO_STORY.groupId}. Create fresh if you need
+            a new path.
           </p>
         </div>
         <Badge variant="outline" className="font-mono text-[10px]">
@@ -52,7 +51,7 @@ export function DemoStoryRail({
             key={step.id}
             className={
               compact
-                ? "min-w-[11rem] shrink-0 shadow-none"
+                ? "min-w-[10.5rem] shrink-0 shadow-none"
                 : "shadow-none transition-shadow hover:shadow-sm"
             }
           >
@@ -71,7 +70,7 @@ export function DemoStoryRail({
                   {step.copy}
                 </p>
               ) : null}
-              <Button asChild size="sm" variant="outline" className="w-full">
+              <Button asChild size="sm" variant="outline" className="h-10 min-h-10 w-full">
                 <Link href={step.href}>
                   {step.cta} <ArrowRight className="ml-1 h-3.5 w-3.5" />
                 </Link>

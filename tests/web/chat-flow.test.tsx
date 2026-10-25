@@ -67,7 +67,8 @@ describe("public chat", () => {
   it("blocks nonmembers from sending", () => {
     groupState = { ...groupState, members: ["alice.testnet"] }
     render(<GroupChat groupId={3} />)
-    expect(screen.getByText(/Only members can send messages/i)).toBeInTheDocument()
+    expect(screen.getByText(/Join to send/i)).toBeInTheDocument()
+    expect(screen.getByRole("link", { name: /Pay and join/i })).toBeInTheDocument()
     expect(screen.queryByPlaceholderText(/Write a public message/i)).not.toBeInTheDocument()
   })
 

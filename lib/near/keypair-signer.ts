@@ -61,16 +61,17 @@ export async function getDemoAccount(
     session.privateKey as Parameters<typeof KeyPair.fromString>[0],
   )
   await keyStore.setKey(config.network, session.accountId, keyPair)
-  // Prefer configured RPC, then a public failover — slow single endpoints
-  // (Node undici 10s connect timeout) are common on constrained networks.
-  // Prefer a responsive public endpoint first — Node undici's 10s connect
-  // timeout often trips on rpc.testnet.near.org from constrained networks.
+  // Prefer responsive public endpoints. Deduped; order matters for Failover.
+  // fastnear 429s are common — keep several alternates so "Exceeded N providers"
+  // is rarer during mobile/demo runs.
   const urls = Array.from(
     new Set(
       [
-        "https://test.rpc.fastnear.com",
         config.rpcUrl,
+        "https://test.rpc.fastnear.com",
         "https://rpc.testnet.near.org",
+        "https://testnet.near.lavanet.xyz",
+        "https://near-testnet.api.pagoda.co/rpc/v1",
       ].filter(Boolean),
     ),
   )
@@ -109,7 +110,7 @@ export function clearDemoAccountCache(): void {
  */
 async function withNonceRetry<T>(run: () => Promise<T>): Promise<T> {
   let lastError: unknown
-  for (let attempt = 0; attempt < 5; attempt += 1) {
+  for (let attempt = 0; attempt < 8; attempt += 1) {
     try {
       const result = await run()
       // `Account` never advances its cached access-key nonce after a successful
@@ -119,12 +120,22 @@ async function withNonceRetry<T>(run: () => Promise<T>): Promise<T> {
       return result
     } catch (reason) {
       lastError = reason
-      if (!/nonce/i.test(String(reason))) throw reason
+      const msg = String(reason)
+      const retryable =
+        /nonce/i.test(msg) ||
+        /429|Rate limit/i.test(msg) ||
+        /Exceeded \d+ providers/i.test(msg) ||
+        /RetriesExceeded/i.test(msg) ||
+        /fetch failed|Connect Timeout|UND_ERR/i.test(msg)
+      if (!retryable) throw reason
       // Drop the cached Account AND build a new connection next attempt: the
       // SDK's internal backoff retries with the same instance, whose access-key
-      // cache can still hold the nonce that the node just rejected.
+      // cache can still hold the nonce that the node just rejected. Also clears
+      // a Failover provider that burned through every URL on a 429 burst.
       clearDemoAccountCache()
-      await new Promise((resolve) => setTimeout(resolve, 800 * (attempt + 1)))
+      await new Promise((resolve) =>
+        setTimeout(resolve, 1200 * (attempt + 1) * (/429|Rate limit|Exceeded/i.test(msg) ? 2 : 1)),
+      )
     }
   }
   throw lastError

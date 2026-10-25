@@ -92,3 +92,16 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+
+/* hide-next-dev-indicator — keep mobile QA shots free of the floating N badge */
+nextjs-portal,
+[data-nextjs-toast],
+[data-next-badge],
+[data-next-mark],
+#__next-build-watcher,
+[data-nextjs-dev-indicator] {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}

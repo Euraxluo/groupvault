@@ -26,30 +26,74 @@ function base64Json(args: Record<string, unknown>): string {
 /**
  * Read-only RPC access. This never signs, never sends, and holds no keys.
  */
+function rpcUrls(primary: string): string[] {
+  return Array.from(
+    new Set(
+      [
+        primary,
+        "https://test.rpc.fastnear.com",
+        "https://rpc.testnet.near.org",
+        "https://testnet.near.lavanet.xyz",
+      ].filter(Boolean),
+    ),
+  )
+}
+
 export class NearRpc {
   constructor(private readonly config: NearConfig) {}
 
   async call<T>(method: string, params: Record<string, unknown>): Promise<T> {
-    const response = await fetch(this.config.rpcUrl, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        jsonrpc: "2.0",
-        id: "groupvault-web",
-        method,
-        params,
-      }),
-    })
-    if (!response.ok) {
-      throw new Error(`NEAR RPC ${method} failed: HTTP ${response.status}`)
+    const urls = rpcUrls(this.config.rpcUrl)
+    let lastError: unknown
+    for (let i = 0; i < urls.length; i += 1) {
+      const url = urls[i]!
+      try {
+        const response = await fetch(url, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            jsonrpc: "2.0",
+            id: "groupvault-web",
+            method,
+            params,
+          }),
+        })
+        if (!response.ok) {
+          throw new Error(`NEAR RPC ${method} failed: HTTP ${response.status}`)
+        }
+        const body = (await response.json()) as RpcResponse<T>
+        if (body.error) {
+          const msg = body.error.message ?? "unknown error"
+          // Rotate on rate limits; surface other RPC errors immediately.
+          if (/429|Rate limit/i.test(msg) || /429/.test(String(body.error.data ?? ""))) {
+            throw new Error(`NEAR RPC ${method}: ${msg}`)
+          }
+          throw new Error(`NEAR RPC ${method}: ${msg}`)
+        }
+        return body.result as T
+      } catch (reason) {
+        lastError = reason
+        const msg = String(reason)
+        if (
+          i < urls.length - 1 &&
+          /429|Rate limit|HTTP 429|fetch failed|Connect Timeout|UND_ERR/i.test(msg)
+        ) {
+          await new Promise((r) => setTimeout(r, 600 * (i + 1)))
+          continue
+        }
+        if (i === urls.length - 1) break
+        // Non-rate-limit JSON-RPC errors should not silently rotate forever,
+        // but a dead endpoint should.
+        if (/HTTP 5|fetch failed|Connect Timeout|UND_ERR/i.test(msg)) {
+          await new Promise((r) => setTimeout(r, 400))
+          continue
+        }
+        throw reason
+      }
     }
-    const body = (await response.json()) as RpcResponse<T>
-    if (body.error) {
-      throw new Error(
-        `NEAR RPC ${method}: ${body.error.message ?? "unknown error"}`,
-      )
-    }
-    return body.result as T
+    throw lastError instanceof Error
+      ? lastError
+      : new Error(`NEAR RPC ${method} failed across ${urls.length} providers`)
   }
 
   async view<T>({ contractId, methodName, args = {} }: ViewCallOptions): Promise<T> {

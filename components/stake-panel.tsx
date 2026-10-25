@@ -119,14 +119,16 @@ export function StakePanel({ daoId }: { daoId: string }) {
           <Input
             id="stake-amount"
             inputMode="numeric"
+            className="h-11 min-h-11 text-base"
             value={stakeAmount}
             onChange={(event) => setStakeAmount(event.target.value)}
             placeholder="2000000"
           />
         </div>
-        <div className="grid gap-2 sm:grid-cols-3">
+        <div className="grid gap-2">
           <Button
             size="sm"
+            className="h-11 min-h-11 w-full rounded-xl"
             variant="outline"
             disabled={busy !== null || !dao.accountId}
             onClick={() =>
@@ -147,6 +149,7 @@ export function StakePanel({ daoId }: { daoId: string }) {
           </Button>
           <Button
             size="sm"
+            className="h-11 min-h-11 w-full rounded-xl"
             variant="outline"
             disabled={
               busy !== null || !dao.accountId || !/^\d+$/.test(stakeAmount)
@@ -170,6 +173,7 @@ export function StakePanel({ daoId }: { daoId: string }) {
           </Button>
           <Button
             size="sm"
+            className="h-11 min-h-11 w-full rounded-xl"
             disabled={
               busy !== null || !dao.accountId || !/^\d+$/.test(stakeAmount)
             }
@@ -192,8 +196,9 @@ export function StakePanel({ daoId }: { daoId: string }) {
           </Button>
         </div>
         {!dao.accountId ? (
-          <p className="text-[11px] text-muted-foreground">
-            Connect a wallet to stake.
+          <p className="rounded-xl border border-dashed p-3 text-sm text-muted-foreground">
+            Connect via the wallet chip above, then run Storage → FT transfer →
+            Delegate.
           </p>
         ) : null}
         <p className="text-[11px] text-muted-foreground">

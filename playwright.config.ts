@@ -19,6 +19,17 @@ export default defineConfig({
       name: "chromium",
       use: { ...devices["Desktop Chrome"] },
     },
+    {
+      name: "Mobile Chrome",
+      use: {
+        ...devices["Pixel 7"],
+        browserName: "chromium",
+        viewport: { width: 390, height: 844 },
+        deviceScaleFactor: 2,
+        isMobile: true,
+        hasTouch: true,
+      },
+    },
   ],
   webServer: {
     command: "pnpm dev -- --hostname 127.0.0.1 --port 3100",

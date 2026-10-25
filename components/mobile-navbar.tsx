@@ -15,7 +15,28 @@ const navigation = [
   { href: "/chat", label: "Chat", icon: MessageSquareText },
   { href: "/dao", label: "DAO", icon: Vote },
   { href: "/inbox", label: "Inbox", icon: Inbox },
-]
+] as const
+
+/** Chat under /groups/:id/chat must light Chat, not Groups. */
+function isNavActive(pathname: string | null, href: string): boolean {
+  if (!pathname) return false
+  if (href === "/chat") {
+    return pathname === "/chat" || /\/groups\/[^/]+\/chat(?:\/|$)/.test(pathname)
+  }
+  if (href === "/groups") {
+    if (pathname === "/groups" || pathname.startsWith("/groups/")) {
+      return !/\/chat(?:\/|$)/.test(pathname)
+    }
+    return false
+  }
+  if (href === "/dao") {
+    return pathname === "/dao" || pathname.startsWith("/dao/")
+  }
+  if (href === "/inbox") {
+    return pathname === "/inbox" || pathname.startsWith("/inbox/")
+  }
+  return pathname === href || pathname.startsWith(`${href}/`)
+}
 
 export function MobileNavbar() {
   const pathname = usePathname()
@@ -24,21 +45,21 @@ export function MobileNavbar() {
 
   return (
     <>
-      <header className="fixed inset-x-0 top-0 z-40 border-b border-border/60 bg-background/90 backdrop-blur-md md:left-1/2 md:top-3 md:max-w-3xl md:-translate-x-1/2 md:rounded-2xl md:border">
-        <div className="flex h-14 items-center justify-between px-4">
-          <Link href="/" className="flex items-center gap-2">
-            <span className="grid h-8 w-8 place-items-center rounded-lg bg-primary text-xs font-bold text-primary-foreground">
+      <header className="fixed inset-x-0 top-0 z-40 border-b border-border/60 bg-background/95 backdrop-blur-md supports-[backdrop-filter]:bg-background/80">
+        <div className="mx-auto flex h-14 max-w-lg items-center justify-between px-4">
+          <Link href="/" className="flex min-w-0 items-center gap-2">
+            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-primary text-xs font-bold text-primary-foreground">
               GV
             </span>
-            <span className="text-sm font-bold tracking-tight">GroupVault</span>
+            <span className="truncate text-sm font-bold tracking-tight">GroupVault</span>
           </Link>
 
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-1.5">
             <Button
               asChild
               variant="ghost"
               size="sm"
-              className="hidden h-8 rounded-full px-2 text-[11px] sm:inline-flex"
+              className="hidden h-9 min-h-9 rounded-full px-2.5 text-xs sm:inline-flex"
             >
               <Link href="/demo">Demo</Link>
             </Button>
@@ -46,7 +67,7 @@ export function MobileNavbar() {
               asChild
               variant="ghost"
               size="sm"
-              className="hidden h-8 rounded-full px-2 text-[11px] sm:inline-flex"
+              className="h-9 min-h-9 rounded-full px-2.5 text-xs"
             >
               <Link href="/me/qr">QR</Link>
             </Button>
@@ -54,34 +75,40 @@ export function MobileNavbar() {
               id="btn-nav-wallet"
               variant="outline"
               size="sm"
-              className="h-8 rounded-full px-3 text-xs"
+              className="h-9 min-h-9 max-w-[9.5rem] rounded-full px-3 text-xs"
               onClick={() => setWalletOpen(true)}
             >
-              <Wallet className="mr-1.5 h-3.5 w-3.5" />
-              {wallet.accountId ? shortAccount(wallet.accountId) : "Connect"}
+              <Wallet className="mr-1.5 h-3.5 w-3.5 shrink-0" />
+              <span className="truncate">
+                {wallet.accountId ? shortAccount(wallet.accountId) : "Connect"}
+              </span>
             </Button>
           </div>
         </div>
       </header>
 
-      <nav className="fixed inset-x-0 bottom-0 z-40 flex justify-around border-t border-border/60 bg-background/95 px-1 py-1 backdrop-blur-md md:bottom-3 md:left-1/2 md:max-w-md md:-translate-x-1/2 md:rounded-2xl md:border md:shadow-lg">
-        {navigation.map(({ href, label, icon: Icon }) => {
-          const active =
-            pathname === href || (pathname?.startsWith(`${href}/`) ?? false)
-          return (
-            <Link
-              key={href}
-              href={href}
-              className={cn(
-                "flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-lg px-1 py-1.5 text-[10px]",
-                active ? "text-primary" : "text-muted-foreground",
-              )}
-            >
-              <Icon className="h-5 w-5" />
-              {label}
-            </Link>
-          )
-        })}
+      <nav
+        aria-label="Primary"
+        className="fixed inset-x-0 bottom-0 z-40 border-t border-border/60 bg-background/95 px-1 pb-[max(0.35rem,env(safe-area-inset-bottom))] pt-1 backdrop-blur-md"
+      >
+        <div className="mx-auto flex max-w-lg justify-around">
+          {navigation.map(({ href, label, icon: Icon }) => {
+            const active = isNavActive(pathname, href)
+            return (
+              <Link
+                key={href}
+                href={href}
+                className={cn(
+                  "flex min-h-12 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-1.5 text-[11px] font-medium",
+                  active ? "text-primary" : "text-muted-foreground",
+                )}
+              >
+                <Icon className="h-5 w-5" strokeWidth={active ? 2.4 : 2} />
+                {label}
+              </Link>
+            )
+          })}
+        </div>
       </nav>
 
       <ConnectWalletDialog open={walletOpen} onOpenChange={setWalletOpen} />

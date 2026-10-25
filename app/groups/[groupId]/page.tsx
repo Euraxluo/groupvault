@@ -106,13 +106,13 @@ export default function GroupPage({
 
         <div className="grid gap-2 sm:grid-cols-2">
           {!isMember ? (
-            <Button asChild>
+            <Button asChild className="h-11 min-h-11 rounded-xl">
               <Link href={`/groups/${groupId}/join`}>
                 <Coins className="mr-2 h-4 w-4" /> Paid join wall
               </Link>
             </Button>
           ) : (
-            <Button asChild>
+            <Button asChild className="h-11 min-h-11 rounded-xl">
               <Link href={`/groups/${groupId}/chat`}>
                 <MessageSquareText className="mr-2 h-4 w-4" /> Chat
               </Link>
@@ -122,21 +122,21 @@ export default function GroupPage({
             Details / roster <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
           {isOwner && !group.dao_id ? (
-            <Button asChild>
+            <Button asChild className="h-11 min-h-11 rounded-xl">
               <Link href={`/groups/${groupId}/convert`}>
                 <KeyRound className="mr-2 h-4 w-4" /> Convert to DAO
               </Link>
             </Button>
           ) : null}
           {group.dao_id ? (
-            <Button asChild>
+            <Button asChild className="h-11 min-h-11 rounded-xl">
               <Link href={`/dao/${group.dao_id}`}>
                 <Vote className="mr-2 h-4 w-4" /> Open DAO hub
               </Link>
             </Button>
           ) : null}
           {isOwner && group.dao_id ? (
-            <Button asChild variant="outline">
+            <Button asChild variant="outline" className="h-11 min-h-11 rounded-xl">
               <Link href={`/groups/${groupId}/convert`}>Convert status</Link>
             </Button>
           ) : null}

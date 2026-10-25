@@ -61,7 +61,7 @@ export function TipMemberButton({
       {!compact ? (
         <Input
           inputMode="numeric"
-          className="h-8 text-[11px]"
+          className="h-11 min-h-11 text-sm"
           value={amount}
           onChange={(event) => setAmount(event.target.value)}
           placeholder="yoctoNEAR"
@@ -70,7 +70,7 @@ export function TipMemberButton({
       <Button
         size="sm"
         variant="outline"
-        className="h-7 px-2 text-[10px]"
+        className={compact ? "h-9 min-h-9 px-3 text-xs" : "h-11 min-h-11 px-4 text-sm"}
         disabled={disabled}
         onClick={() => void send()}
         title={

@@ -59,7 +59,7 @@ export function GroupJoinCard({ groupId }: { groupId: number }) {
               />
             ) : null}
             <Button
-              className="w-full"
+              className="h-12 min-h-12 w-full rounded-xl text-base"
               disabled={!session || !wallet.accountId || submitting || isOwner}
               onClick={async () => {
                 await join(amount || group.join_fee)

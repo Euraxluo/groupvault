@@ -15,7 +15,7 @@ test.describe("storyline click-through surfaces", () => {
     await expect(page.getByRole("link", { name: /Join group/i })).toBeVisible()
 
     const checks: { path: string; heading: RegExp; cta: RegExp }[] = [
-      { path: "/", heading: /A group chat with a treasury/i, cta: /Demo story/i },
+      { path: "/", heading: /Paid group → chat → Convert → stake/i, cta: /Demo story/i },
       { path: "/groups/new", heading: /New group/i, cta: /Open create form|Create/i },
       { path: "/groups", heading: /Groups/i, cta: /New/i },
       { path: "/discover", heading: /Discover/i, cta: /New|My groups/i },
@@ -32,7 +32,7 @@ test.describe("storyline click-through surfaces", () => {
       {
         path: `/groups/${DEMO_STORY.groupId}/chat`,
         heading: /.+/,
-        cta: /Send|Connect|Group overview|not a member|indexing/i,
+        cta: /Send|Connect to chat|Connect wallet|Pay and join|Join to send|Group overview|indexing/i,
       },
       {
         path: `/groups/${DEMO_STORY.groupId}/convert`,
@@ -70,7 +70,7 @@ test.describe("storyline click-through surfaces", () => {
         cta: /Approve exact kind|Proposal not found|Connect/i,
       },
       { path: "/me/qr", heading: /QR card/i, cta: /Connect|Copy account|Open inbox/i },
-      { path: "/inbox", heading: /Inbox/i, cta: /Demo|Create a Transfer|Open|Connect/i },
+      { path: "/inbox", heading: /Inbox/i, cta: /Open \/ vote|Create a Transfer|Connect a wallet|Pending/i },
     ]
 
     for (const check of checks) {

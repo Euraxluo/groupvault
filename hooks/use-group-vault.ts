@@ -31,7 +31,14 @@ export function useGroupVault(groupId?: number): GroupContext {
   const [error, setError] = useState<string | null>(null)
 
   const refresh = useCallback(async () => {
-    if (!session || groupId === undefined) return
+    if (groupId === undefined) {
+      setLoading(false)
+      return
+    }
+    if (!session) {
+      // Selector still booting — keep the loading copy, do not mark unavailable.
+      return
+    }
     const config = getNearConfig()
     if (!config.groupVaultContractId) {
       setError("GroupVault contract is not configured yet.")
