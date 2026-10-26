@@ -1,6 +1,6 @@
 {
   "at": "2026-10-26T05:14:03.590Z",
-  "startFrame": 74,
+  "startFrame": 103,
   "frames": [
     {
       "name": "74-A-home",
@@ -146,6 +146,61 @@
       "name": "102-A-dao-hub",
       "caption": "DAO hub gv16-8jh4.sputnikv2.testnet",
       "ok": true
+    },
+    {
+      "name": "103-A-dao-hub",
+      "caption": "A DAO hub before Transfer",
+      "ok": true
+    },
+    {
+      "name": "104-A-treasury",
+      "caption": "A treasury form",
+      "ok": true
+    },
+    {
+      "name": "105-A-transfer-form",
+      "caption": "A Transfer form filled",
+      "ok": true
+    },
+    {
+      "name": "106-A-transfer-submitted",
+      "caption": "A after Add Transfer click",
+      "ok": true
+    },
+    {
+      "name": "107-A-proposal",
+      "caption": "A proposal #0 status=InProgress",
+      "ok": true
+    },
+    {
+      "name": "108-A-voted",
+      "caption": "A after Approve click",
+      "ok": true
+    },
+    {
+      "name": "109-B-proposal",
+      "caption": "B proposal #0",
+      "ok": true
+    },
+    {
+      "name": "110-B-voted",
+      "caption": "B after Approve",
+      "ok": true
+    },
+    {
+      "name": "111-A-proposal-final",
+      "caption": "Final status=Approved",
+      "ok": true
+    },
+    {
+      "name": "112-A-dao-after",
+      "caption": "A DAO hub after Transfer vote",
+      "ok": true
+    },
+    {
+      "name": "113-A-chat-post-gov",
+      "caption": "A chat-first after governance",
+      "ok": true
     }
   ],
   "steps": {
@@ -195,12 +250,56 @@
     "summary": {
       "balanceA": true,
       "create": true,
-      "joinB": true,
-      "joinC": true,
       "chatA": true,
+      "joinB": true,
       "chatB": true,
+      "joinC": true,
       "chatC": true,
-      "convert": true
+      "convert": true,
+      "policyRoleWeight": true,
+      "transferPropose": true,
+      "transferInProgress": true,
+      "voteA": true,
+      "voteB": true,
+      "transferApproved": true,
+      "transferPayout": true
+    },
+    "policyRoleWeight": {
+      "pass": true,
+      "weight_kind": "RoleWeight",
+      "threshold": [
+        1,
+        2
+      ],
+      "bond": "1000000000000000000000000"
+    },
+    "transferPropose": {
+      "pass": true,
+      "via": "ui",
+      "proposalId": 0
+    },
+    "transferInProgress": {
+      "pass": true,
+      "status": "InProgress"
+    },
+    "voteA": {
+      "pass": true,
+      "statusAfter": "InProgress"
+    },
+    "voteB": {
+      "pass": true,
+      "statusAfter": "Approved"
+    },
+    "transferApproved": {
+      "pass": true,
+      "status": "Approved",
+      "proposalId": 0
+    },
+    "transferPayout": {
+      "pass": true,
+      "daoDebit": 0.5,
+      "bGain": 0.4993853773262451,
+      "transferNear": 0.5
     }
   },
   "groupId": 16,
@@ -208,7 +307,53 @@
   "groupName": "Mobile3 sxqh5",
   "aNearBefore": 12.997649540738218,
   "aNearAfter": 2.979469234053469,
-  "nextFrame": 103,
+  "nextFrame": 114,
   "resumeAt": "2026-10-26T05:19:33.211Z",
-  "resumeFrom": 92
+  "resumeFrom": 92,
+  "govAt": "2026-10-26T05:27:01.267Z",
+  "balancesBefore": {
+    "A": 2.979469234053469,
+    "B": 0.4491665793298507,
+    "DAO": 6
+  },
+  "policy": {
+    "weight_kind": "RoleWeight",
+    "threshold": [
+      1,
+      2
+    ],
+    "bond": "1000000000000000000000000"
+  },
+  "proposalId": 0,
+  "balancesAfter": {
+    "A": 2.9789654190647696,
+    "B": 0.9485519566560958,
+    "DAO": 5.5
+  },
+  "proposal": {
+    "id": 0,
+    "proposer": "gv-a-1024-210252.testnet",
+    "description": "Mobile3 g16 Transfer 0.5N to B",
+    "kind": {
+      "Transfer": {
+        "token_id": "",
+        "receiver_id": "gv-b-1024-210252.testnet",
+        "amount": "500000000000000000000000",
+        "msg": null
+      }
+    },
+    "status": "Approved",
+    "vote_counts": {
+      "council": [
+        2,
+        0,
+        0
+      ]
+    },
+    "votes": {
+      "gv-b-1024-210252.testnet": "Approve",
+      "gv-a-1024-210252.testnet": "Approve"
+    },
+    "submission_time": "1792992443982360997"
+  }
 }

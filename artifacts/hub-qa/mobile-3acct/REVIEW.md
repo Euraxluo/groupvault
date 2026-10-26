@@ -35,3 +35,19 @@ Viewport: **390×844** · `fullPage: false` · Asia/Shanghai **2026-10-26 ~13:23
 ## Next
 - Frame **103+**: post-convert TokenWeight / Transfer story on `gv16-8jh4`, or recover indexer cursor.
 - Optional: redeploy GroupVault wasm so on-chain CONVERT_DEPOSIT matches source 5N, then lower TS again.
+
+## Continuation 2026-10-26 13:28 CST — governance Transfer #0
+
+| Step | Verdict | Notes |
+| --- | --- | --- |
+| Policy RoleWeight | **PASS** | threshold [1,2]; council A/B/C; staking unset (TokenWeight path not required this beat) |
+| A Add Transfer #0 | **PASS** | UI `add_proposal`; 0.5N native → B; bond 1N |
+| A VoteApprove | **PASS** | still InProgress (need ≥2 council with 1/2 of 3 → ceil path needed 2) |
+| B VoteApprove | **PASS** | status → **Approved**; vote_counts council [2,0,0] |
+| Payout | **PASS** | DAO −0.5N (6.0→5.5); B +≈0.5N (0.45→0.95) |
+| Frames 103–113 | **PASS** | phone 390×844; chat-first frame 113 after gov |
+
+### Honest soft notes
+- Did **not** run SetStakingContract / TokenWeight / stake this beat (A≈2.98N; RoleWeight sufficient for Transfer proof).
+- Indexer still lagging (RPC 422) — unrelated to Transfer finality (on-chain Approved).
+- Jobs IA bottom-nav not restored.
