@@ -1,6 +1,6 @@
 {
   "at": "2026-10-26T05:14:03.590Z",
-  "startFrame": 103,
+  "startFrame": 114,
   "frames": [
     {
       "name": "74-A-home",
@@ -201,6 +201,86 @@
       "name": "113-A-chat-post-gov",
       "caption": "A chat-first after governance",
       "ok": true
+    },
+    {
+      "name": "114-A-dao-start",
+      "caption": "A DAO hub start TokenWeight beat",
+      "ok": true
+    },
+    {
+      "name": "115-A-fund-treasury",
+      "caption": "A treasury before fund-self Transfer",
+      "ok": true
+    },
+    {
+      "name": "116-A-fund-proposal",
+      "caption": "A #1 InProgress",
+      "ok": true
+    },
+    {
+      "name": "117-A-fund-voted",
+      "caption": "A voted fund",
+      "ok": true
+    },
+    {
+      "name": "118-B-fund-proposal",
+      "caption": "B #1",
+      "ok": true
+    },
+    {
+      "name": "119-B-fund-voted",
+      "caption": "B voted fund",
+      "ok": true
+    },
+    {
+      "name": "120-A-dao-resume",
+      "caption": "Resume after fund attempt A=0.771",
+      "ok": true
+    },
+    {
+      "name": "121-A-staking-setup",
+      "caption": "A staking setup with gv16 staking id",
+      "ok": true
+    },
+    {
+      "name": "122-A-setstaking-filled",
+      "caption": "SetStaking form filled",
+      "ok": true
+    },
+    {
+      "name": "123-A-setstaking-result",
+      "caption": "SetStaking #2 Approved",
+      "ok": true
+    },
+    {
+      "name": "124-A-tokenweight-result",
+      "caption": "TokenWeight #3 Approved",
+      "ok": true
+    },
+    {
+      "name": "125-A-stake-done",
+      "caption": "A stake delegation=2000000",
+      "ok": true
+    },
+    {
+      "name": "126-B-tw-before",
+      "caption": "B zero-weight #4",
+      "ok": true
+    },
+    {
+      "name": "127-B-tw-zero",
+      "caption": "zeroReject=true",
+      "ok": true
+    },
+    {
+      "name": "128-A-tw-transfer-final",
+      "caption": "TW Transfer #4 Approved",
+      "ok": true
+    },
+    {
+      "name": "129-A-dao-final",
+      "caption": "DAO hub final",
+      "ok": true
     }
   ],
   "steps": {
@@ -262,7 +342,15 @@
       "voteA": true,
       "voteB": true,
       "transferApproved": true,
-      "transferPayout": true
+      "transferPayout": true,
+      "fundA": false,
+      "rejectFund1": true,
+      "deployStaking": true,
+      "setStaking": true,
+      "tokenWeight": true,
+      "stakeA": true,
+      "zeroWeightReject": true,
+      "transferTw": true
     },
     "policyRoleWeight": {
       "pass": true,
@@ -300,6 +388,43 @@
       "daoDebit": 0.5,
       "bGain": 0.4993853773262451,
       "transferNear": 0.5
+    },
+    "fundA": {
+      "pass": false,
+      "status": "InProgress",
+      "near": "3.2"
+    },
+    "rejectFund1": {
+      "pass": true,
+      "status": "Rejected"
+    },
+    "deployStaking": {
+      "pass": true,
+      "stakingId": "staking.gv-a-1024-210252.testnet",
+      "attachNear": 2.2
+    },
+    "setStaking": {
+      "pass": true,
+      "status": "Approved",
+      "stakingOn": "staking.gv-a-1024-210252.testnet"
+    },
+    "tokenWeight": {
+      "pass": true,
+      "id": 3,
+      "status": "Approved",
+      "weight": "TokenWeight"
+    },
+    "stakeA": {
+      "pass": true,
+      "delegation": "2000000"
+    },
+    "zeroWeightReject": {
+      "pass": true
+    },
+    "transferTw": {
+      "pass": true,
+      "id": 4,
+      "status": "Approved"
     }
   },
   "groupId": 16,
@@ -307,14 +432,14 @@
   "groupName": "Mobile3 sxqh5",
   "aNearBefore": 12.997649540738218,
   "aNearAfter": 2.979469234053469,
-  "nextFrame": 114,
+  "nextFrame": 130,
   "resumeAt": "2026-10-26T05:19:33.211Z",
   "resumeFrom": 92,
   "govAt": "2026-10-26T05:27:01.267Z",
   "balancesBefore": {
-    "A": 2.979469234053469,
-    "B": 0.4491665793298507,
-    "DAO": 6
+    "A": 2.9789654190647696,
+    "DAO": 5.5,
+    "B": 0.9485519566560958
   },
   "policy": {
     "weight_kind": "RoleWeight",
@@ -326,9 +451,10 @@
   },
   "proposalId": 0,
   "balancesAfter": {
-    "A": 2.9789654190647696,
-    "B": 0.9485519566560958,
-    "DAO": 5.5
+    "A": 0.665778397083689,
+    "B": 0.29569462216070297,
+    "C": 0.2010265065712348,
+    "DAO": 6.4001600000000005
   },
   "proposal": {
     "id": 0,
@@ -355,5 +481,22 @@
       "gv-a-1024-210252.testnet": "Approve"
     },
     "submission_time": "1792992443982360997"
-  }
+  },
+  "twAt": "2026-10-26T06:10:16.159Z",
+  "stakingId": "staking.gv-a-1024-210252.testnet",
+  "proposals": {
+    "fundA": {
+      "id": 1
+    },
+    "fund": {
+      "id": 1,
+      "status": "InProgress"
+    }
+  },
+  "fatal": "Exceeded 2 providers to execute request",
+  "twResumeAt": "2026-10-26T06:15:41.862Z",
+  "policyWeight": "TokenWeight",
+  "twContinueAt": "2026-10-26T06:19:56.451Z",
+  "delegationA": "2000000",
+  "twFinishAt": "2026-10-26T06:23:11.797Z"
 }

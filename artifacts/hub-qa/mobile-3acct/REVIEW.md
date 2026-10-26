@@ -51,3 +51,22 @@ Viewport: **390×844** · `fullPage: false` · Asia/Shanghai **2026-10-26 ~13:23
 - Did **not** run SetStakingContract / TokenWeight / stake this beat (A≈2.98N; RoleWeight sufficient for Transfer proof).
 - Indexer still lagging (RPC 422) — unrelated to Transfer finality (on-chain Approved).
 - Jobs IA bottom-nav not restored.
+
+## Continuation 2026-10-26 14:30 CST — TokenWeight beat
+
+| Step | Verdict | Notes |
+| --- | --- | --- |
+| Reuse shared sputnikstaking | **BLOCKED** | STATE owner=`groupvault-13.sputnikv2.testnet` |
+| Fund A 3.2N from DAO (#1) | **FAIL→Rejected** | Execute would leave DAO below storage floor (~need +2.11N); B+C VoteReject |
+| Deploy `staking.gv-a-1024-210252.testnet` | **PASS** | owner=gv16, token=join FT; ~2.2N wasm storage |
+| SetStaking #2 | **PASS** | B+C Approve (A gas-starved); `get_staking_contract` set |
+| TokenWeight #3 | **PASS** | B+C Approve; policy TokenWeight [1,2] |
+| A stake/delegate | **PASS** | Need FT `storage_deposit` for staking account first; delegation=2000000 |
+| B zero-weight | **PASS** | UI “Zero voting weight” (frame 127) |
+| Transfer #4 0.1N→B | **PASS** | A VoteApprove with stake weight; DAO 6.5→6.4N |
+
+### Soft / ops
+- DAO treasury tightly storage-locked after Convert; large native Transfers out fail.
+- Proposal bond 1N + staking deploy drained A; B/C topped gas.
+- Indexer still lagging — Transfer finality is on-chain Approved.
+- Jobs IA not restored.
