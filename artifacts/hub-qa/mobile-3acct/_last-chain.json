@@ -1,25 +1,214 @@
 {
-  "groupId": 14,
-  "members": [
-    "gv-a-1024-210252.testnet",
-    "gv-b-1024-210252.testnet",
-    "gv-topup-mvmi9vo1.testnet"
+  "at": "2026-10-26T05:14:03.590Z",
+  "startFrame": 74,
+  "frames": [
+    {
+      "name": "74-A-home",
+      "caption": "A connected home",
+      "ok": true
+    },
+    {
+      "name": "75-A-create-form",
+      "caption": "A create group form",
+      "ok": true
+    },
+    {
+      "name": "76-A-overview",
+      "caption": "A group 16 overview",
+      "ok": true
+    },
+    {
+      "name": "77-A-chat",
+      "caption": "A chat before send",
+      "ok": true
+    },
+    {
+      "name": "78-A-chat-no-composer",
+      "caption": "A no composer",
+      "ok": true
+    },
+    {
+      "name": "79-B-home",
+      "caption": "B connected home",
+      "ok": true
+    },
+    {
+      "name": "80-B-join",
+      "caption": "B join wall 16",
+      "ok": true
+    },
+    {
+      "name": "81-B-join-result",
+      "caption": "B after join click",
+      "ok": true
+    },
+    {
+      "name": "82-B-chat",
+      "caption": "B chat",
+      "ok": true
+    },
+    {
+      "name": "83-B-chat-no-composer",
+      "caption": "B no composer",
+      "ok": true
+    },
+    {
+      "name": "84-C-home",
+      "caption": "C connected home",
+      "ok": true
+    },
+    {
+      "name": "85-C-join",
+      "caption": "C join wall 16",
+      "ok": true
+    },
+    {
+      "name": "86-C-join-result",
+      "caption": "C after join click",
+      "ok": true
+    },
+    {
+      "name": "87-C-chat",
+      "caption": "C chat",
+      "ok": true
+    },
+    {
+      "name": "88-C-chat-no-composer",
+      "caption": "C no composer",
+      "ok": true
+    },
+    {
+      "name": "89-A-convert",
+      "caption": "A convert form",
+      "ok": true
+    },
+    {
+      "name": "90-A-convert-waiting",
+      "caption": "A after convert click",
+      "ok": true
+    },
+    {
+      "name": "91-A-convert-result",
+      "caption": "A convert final UI",
+      "ok": true
+    },
+    {
+      "name": "92-A-chat-ready",
+      "caption": "A chat after wait ready=false",
+      "ok": true
+    },
+    {
+      "name": "93-A-chat-sent",
+      "caption": "A after send",
+      "ok": true
+    },
+    {
+      "name": "94-B-chat-ready",
+      "caption": "B chat after wait ready=false",
+      "ok": true
+    },
+    {
+      "name": "95-B-chat-sent",
+      "caption": "B after send",
+      "ok": true
+    },
+    {
+      "name": "96-C-chat-ready",
+      "caption": "C chat after wait ready=false",
+      "ok": true
+    },
+    {
+      "name": "97-C-chat-sent",
+      "caption": "C after send",
+      "ok": true
+    },
+    {
+      "name": "98-A-convert-10n",
+      "caption": "A convert form (expect 10N deposit)",
+      "ok": true
+    },
+    {
+      "name": "99-A-convert-submitted",
+      "caption": "A after convert submit",
+      "ok": true
+    },
+    {
+      "name": "100-A-convert-final",
+      "caption": "A convert final",
+      "ok": true
+    },
+    {
+      "name": "101-A-chat-post-convert",
+      "caption": "A chat after convert",
+      "ok": true
+    },
+    {
+      "name": "102-A-dao-hub",
+      "caption": "DAO hub gv16-8jh4.sputnikv2.testnet",
+      "ok": true
+    }
   ],
-  "cMessage": "C mobile joined #14 1792894354543",
-  "aNear": 1.3602021568070979,
-  "convertDepositNeededNear": 10,
-  "group": {
-    "id": 14,
-    "owner": "gv-a-1024-210252.testnet",
-    "name": "Mobile3 5oip0",
-    "description": "",
-    "join_fee": "1000000",
-    "join_ft": "gv-deployer-1024-204559-ft.testnet",
-    "member_count": 3,
-    "dao_id": null,
-    "convert_pending": false,
-    "created_at": 1792892129002154200
+  "steps": {
+    "balanceA": {
+      "pass": true,
+      "near": 12.997649540738218
+    },
+    "create": {
+      "pass": true,
+      "groupId": 16,
+      "name": "Mobile3 sxqh5",
+      "member_count": 1
+    },
+    "chatA": {
+      "pass": true,
+      "msg": "A mobile resume 1792992031730"
+    },
+    "joinB": {
+      "pass": true,
+      "members": [
+        "gv-a-1024-210252.testnet",
+        "gv-b-1024-210252.testnet"
+      ]
+    },
+    "chatB": {
+      "pass": true,
+      "msg": "B mobile resume 1792992089473"
+    },
+    "joinC": {
+      "pass": true,
+      "members": [
+        "gv-a-1024-210252.testnet",
+        "gv-b-1024-210252.testnet",
+        "gv-topup-mvmi9vo1.testnet"
+      ]
+    },
+    "chatC": {
+      "pass": true,
+      "msg": "C mobile resume 1792992147158"
+    },
+    "convert": {
+      "pass": true,
+      "dao_id": "gv16-8jh4.sputnikv2.testnet",
+      "convert_pending": false,
+      "depositNear": 10
+    },
+    "summary": {
+      "balanceA": true,
+      "create": true,
+      "joinB": true,
+      "joinC": true,
+      "chatA": true,
+      "chatB": true,
+      "chatC": true,
+      "convert": true
+    }
   },
-  "convertBlockedReason": "A has 1.3602 NEAR; CONVERT_DEPOSIT is 10 NEAR. Faucet unreachable (rpc.testnet.near.org timeout).",
-  "at": "2026-10-25T02:13:35.020Z"
+  "groupId": 16,
+  "daoId": "gv16-8jh4.sputnikv2.testnet",
+  "groupName": "Mobile3 sxqh5",
+  "aNearBefore": 12.997649540738218,
+  "aNearAfter": 2.979469234053469,
+  "nextFrame": 103,
+  "resumeAt": "2026-10-26T05:19:33.211Z",
+  "resumeFrom": 92
 }

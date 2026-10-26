@@ -31,8 +31,10 @@ function rpcUrls(primary: string): string[] {
     new Set(
       [
         primary,
-        "https://rpc.testnet.near.org",
+        "https://testnet-rpc.intea.rs",
+        "https://rpc.testnet.fastnear.com",
         "https://test.rpc.fastnear.com",
+        "https://rpc.testnet.near.org",
       ].filter(Boolean),
     ),
   )
@@ -75,7 +77,7 @@ export class NearRpc {
         const msg = String(reason)
         if (
           i < urls.length - 1 &&
-          /429|Rate limit|HTTP 429|fetch failed|Connect Timeout|UND_ERR/i.test(msg)
+          /429|Rate limit|HTTP 429|Failed to fetch|fetch failed|NetworkError|Load failed|Connect Timeout|UND_ERR/i.test(msg)
         ) {
           await new Promise((r) => setTimeout(r, 600 * (i + 1)))
           continue
@@ -83,7 +85,7 @@ export class NearRpc {
         if (i === urls.length - 1) break
         // Non-rate-limit JSON-RPC errors should not silently rotate forever,
         // but a dead endpoint should.
-        if (/HTTP 5|fetch failed|Connect Timeout|UND_ERR/i.test(msg)) {
+        if (/HTTP 5|Failed to fetch|fetch failed|NetworkError|Load failed|Connect Timeout|UND_ERR/i.test(msg)) {
           await new Promise((r) => setTimeout(r, 400))
           continue
         }

@@ -43,17 +43,35 @@ export default function GroupPage({
   }
 
   if (error || !group) {
+    const networkish = Boolean(
+      error && /Failed to fetch|fetch failed|NetworkError|429|Rate limit|RPC/i.test(error),
+    )
     return (
       <main className="min-h-screen bg-background">
         <MobileNavbar />
         <div className="mx-auto max-w-2xl px-4 pt-24">
-          <h1 className="text-xl font-bold">Group not found</h1>
-          <p className="mt-2 text-xs text-muted-foreground">
-            {error ?? `No group with ID ${raw}.`}
+          <h1 className="text-xl font-bold">
+            {networkish ? "网络繁忙" : "Group not found"}
+          </h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            {networkish
+              ? "链上节点暂时拉不到群信息，请稍后重试。"
+              : (error ?? `No group with ID ${raw}.`)}
           </p>
-          <Button asChild variant="outline" className="mt-4">
-            <Link href="/groups">Back to groups</Link>
-          </Button>
+          <div className="mt-4 flex flex-wrap gap-2">
+            {networkish ? (
+              <Button
+                type="button"
+                className="h-11 rounded-xl"
+                onClick={() => window.location.reload()}
+              >
+                重试
+              </Button>
+            ) : null}
+            <Button asChild variant="outline" className="h-11 rounded-xl">
+              <Link href="/groups">Back to groups</Link>
+            </Button>
+          </div>
         </div>
       </main>
     )
