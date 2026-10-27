@@ -1,6 +1,6 @@
 {
   "at": "2026-10-26T05:14:03.590Z",
-  "startFrame": 114,
+  "startFrame": 153,
   "frames": [
     {
       "name": "74-A-home",
@@ -281,6 +281,139 @@
       "name": "129-A-dao-final",
       "caption": "DAO hub final",
       "ok": true
+    },
+    {
+      "name": "130-A-discover",
+      "caption": "A Discover mobile",
+      "ok": true
+    },
+    {
+      "name": "131-A-groups",
+      "caption": "A groups list",
+      "ok": true
+    },
+    {
+      "name": "132-A-g16-overview",
+      "caption": "A group 16 overview",
+      "ok": true
+    },
+    {
+      "name": "133-A-g16-roster",
+      "caption": "A roster / details",
+      "ok": true
+    },
+    {
+      "name": "134-B-g16-roster",
+      "caption": "B roster for tip",
+      "ok": true
+    },
+    {
+      "name": "135-A-g16-chat",
+      "caption": "A g16 chat",
+      "ok": true
+    },
+    {
+      "name": "136-A-qr",
+      "caption": "A QR page",
+      "ok": true
+    },
+    {
+      "name": "137-A-inbox",
+      "caption": "A inbox for gv16",
+      "ok": true
+    },
+    {
+      "name": "138-A-dao-hub",
+      "caption": "A DAO hub polish",
+      "ok": true
+    },
+    {
+      "name": "139-A-stake-ui",
+      "caption": "A stake panel (delegation live)",
+      "ok": true
+    },
+    {
+      "name": "140-A-staking-setup-done",
+      "caption": "A staking setup (already TokenWeight)",
+      "ok": true
+    },
+    {
+      "name": "141-A-treasury",
+      "caption": "A treasury",
+      "ok": true
+    },
+    {
+      "name": "142-A-proposals-list",
+      "caption": "A proposals list 0/2/3/4",
+      "ok": true
+    },
+    {
+      "name": "143-A-proposal4-detail",
+      "caption": "A Transfer#4 detail Approved",
+      "ok": true
+    },
+    {
+      "name": "144-A-transfer5-open",
+      "caption": "Transfer #5 InProgress",
+      "ok": true
+    },
+    {
+      "name": "145-B-transfer5-zero",
+      "caption": "B zero-weight again=true",
+      "ok": true
+    },
+    {
+      "name": "146-A-transfer5-final",
+      "caption": "Transfer #5 Approved",
+      "ok": true
+    },
+    {
+      "name": "147-A-roster-tip-ui",
+      "caption": "A roster Tip UI",
+      "ok": true
+    },
+    {
+      "name": "148-A-g16-chat-wrap",
+      "caption": "A chat wrap pass=true",
+      "ok": true
+    },
+    {
+      "name": "149-C-home",
+      "caption": "C home",
+      "ok": true
+    },
+    {
+      "name": "150-C-g16-chat",
+      "caption": "C g16 chat",
+      "ok": true
+    },
+    {
+      "name": "151-C-qr",
+      "caption": "C QR",
+      "ok": true
+    },
+    {
+      "name": "152-A-dao-end",
+      "caption": "A DAO hub complete",
+      "ok": true
+    },
+    {
+      "n": 153,
+      "file": "153-A-g16-details-tip-visible.png",
+      "caption": "A details inline Tip count=2",
+      "at": "2026-10-27T07:25:19.134Z"
+    },
+    {
+      "n": 154,
+      "file": "154-A-tip-after-click.png",
+      "caption": "A after Tip click txShown=true",
+      "at": "2026-10-27T07:25:31.412Z"
+    },
+    {
+      "n": 155,
+      "file": "155-A-roster-full-tip.png",
+      "caption": "A full roster Tip count=2",
+      "at": "2026-10-27T07:25:36.055Z"
     }
   ],
   "steps": {
@@ -350,7 +483,15 @@
       "tokenWeight": true,
       "stakeA": true,
       "zeroWeightReject": true,
-      "transferTw": true
+      "transferTw": true,
+      "stakingTopupA": true,
+      "tip": true,
+      "chatWrap": true,
+      "zeroWeightReject2": true,
+      "tipAB": true,
+      "tipUI": true,
+      "transfer5": true,
+      "tipRosterFull": true
     },
     "policyRoleWeight": {
       "pass": true,
@@ -425,6 +566,43 @@
       "pass": true,
       "id": 4,
       "status": "Approved"
+    },
+    "stakingTopupA": {
+      "pass": true
+    },
+    "tip": {
+      "pass": true,
+      "note": "superseded by tipUI PASS @153"
+    },
+    "chatWrap": {
+      "pass": true
+    },
+    "zeroWeightReject2": {
+      "pass": true
+    },
+    "tipAB": {
+      "pass": true,
+      "near": 0.01
+    },
+    "tipUI": {
+      "pass": true,
+      "clicked": true,
+      "txShown": true,
+      "tx": "tx B2QCabYzZtoFVJ8u4FWHTemho5FPdXDK3HznRTvn94GR",
+      "beforeA": 1.3296822131834432,
+      "afterA": 1.319637576670943,
+      "beforeB": 0.059560712623203,
+      "afterB": 0.069560712623203,
+      "deltaB": 0.010000000000000002
+    },
+    "transfer5": {
+      "pass": true,
+      "id": 5,
+      "status": "Approved"
+    },
+    "tipRosterFull": {
+      "pass": true,
+      "count": 2
     }
   },
   "groupId": 16,
@@ -432,7 +610,7 @@
   "groupName": "Mobile3 sxqh5",
   "aNearBefore": 12.997649540738218,
   "aNearAfter": 2.979469234053469,
-  "nextFrame": 130,
+  "nextFrame": 156,
   "resumeAt": "2026-10-26T05:19:33.211Z",
   "resumeFrom": 92,
   "govAt": "2026-10-26T05:27:01.267Z",
@@ -451,10 +629,11 @@
   },
   "proposalId": 0,
   "balancesAfter": {
-    "A": 0.665778397083689,
-    "B": 0.29569462216070297,
-    "C": 0.2010265065712348,
-    "DAO": 6.4001600000000005
+    "A": 1.3296822131834432,
+    "B": 0.059560712623203,
+    "C": 0.0998925970337348,
+    "DAO": 6.35016,
+    "staking": 2.020054976502067
   },
   "proposal": {
     "id": 0,
@@ -491,12 +670,18 @@
     "fund": {
       "id": 1,
       "status": "InProgress"
+    },
+    "transfer5": {
+      "id": 5
     }
   },
-  "fatal": "Exceeded 2 providers to execute request",
   "twResumeAt": "2026-10-26T06:15:41.862Z",
   "policyWeight": "TokenWeight",
   "twContinueAt": "2026-10-26T06:19:56.451Z",
   "delegationA": "2000000",
-  "twFinishAt": "2026-10-26T06:23:11.797Z"
+  "twFinishAt": "2026-10-26T06:23:11.797Z",
+  "wrapAt": "2026-10-26T06:42:15.399Z",
+  "mobile01CanClose": true,
+  "mobile01Notes": "Acceptance met: Tip UI PASS (\u6253\u8d4f visible+tappable on Details; tx shown; B +0.01N). Prior wrap130 frames 130\u2013152; Transfer#5 Approved; tipAB on-chain; chatWrap PASS.",
+  "tipUiAt": "2026-10-27T07:25:07.293Z"
 }

@@ -26,16 +26,18 @@ export function TipMemberButton({
   const [error, setError] = useState<string | null>(null)
   const [tx, setTx] = useState<string | null>(null)
 
+  const isSelf = Boolean(wallet.accountId && receiverId === wallet.accountId)
+  const connected = Boolean(session && wallet.accountId)
   const disabled =
-    busy ||
-    !session ||
-    !wallet.accountId ||
-    receiverId === wallet.accountId ||
-    !/^\d+$/.test(amount)
+    busy || !connected || isSelf || !/^\d+$/.test(amount)
 
   const send = async () => {
     if (!session || !wallet.accountId) {
-      setError("Connect a wallet to tip")
+      setError("请先连接钱包再打赏")
+      return
+    }
+    if (isSelf) {
+      setError("不能给自己打赏")
       return
     }
     setBusy(true)
@@ -57,7 +59,14 @@ export function TipMemberButton({
   }
 
   return (
-    <div className={compact ? "space-y-1" : "space-y-2"}>
+    <div
+      className={
+        compact
+          ? "shrink-0 space-y-1 text-right"
+          : "space-y-2"
+      }
+      data-tip-receiver={receiverId}
+    >
       {!compact ? (
         <Input
           inputMode="numeric"
@@ -68,29 +77,48 @@ export function TipMemberButton({
         />
       ) : null}
       <Button
+        type="button"
         size="sm"
         variant="outline"
-        className={compact ? "h-9 min-h-9 px-3 text-xs" : "h-11 min-h-11 px-4 text-sm"}
+        className={
+          compact
+            ? "h-10 min-h-10 min-w-[4.5rem] px-3 text-xs font-medium"
+            : "h-11 min-h-11 px-4 text-sm font-medium"
+        }
         disabled={disabled}
         onClick={() => void send()}
-        title={
-          !wallet.accountId
-            ? "Connect a wallet to tip"
-            : receiverId === wallet.accountId
+        aria-label={
+          !connected
+            ? "Connect wallet to tip"
+            : isSelf
               ? "Cannot tip yourself"
-              : "Direct wallet NEAR transfer"
+              : `Tip ${receiverId}`
+        }
+        title={
+          !connected
+            ? "请先连接钱包"
+            : isSelf
+              ? "不能给自己打赏"
+              : "直接转账 NEAR（非金库提案）"
         }
       >
         {busy ? (
-          <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+          <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
         ) : (
-          <Gift className="mr-1 h-3 w-3" />
+          <Gift className="mr-1 h-3.5 w-3.5" />
         )}
-        Tip
+        {isSelf ? "自己" : (<><span className="sr-only">Tip </span>打赏</>)}
       </Button>
-      {error ? <p className="text-[10px] text-destructive">{error}</p> : null}
+      {error ? (
+        <p className="max-w-[9rem] text-[10px] leading-tight text-destructive">
+          {error}
+        </p>
+      ) : null}
       {tx ? (
-        <p className="break-all font-mono text-[10px] text-emerald-700">
+        <p
+          className="max-w-[9rem] break-all font-mono text-[10px] leading-tight text-emerald-700"
+          data-tip-tx={tx}
+        >
           tx {tx}
         </p>
       ) : null}

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { Copy, MessageSquareText, Users } from "lucide-react"
 import Link from "next/link"
 
+import { TipMemberButton } from "@/components/tip-member-button"
 import { GroupRosterDialog } from "@/components/group-roster-dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -31,18 +32,30 @@ export function GroupDetailsDialog({
   const [copied, setCopied] = useState(false)
 
   useEffect(() => {
-    if (!open) setCopied(false)
+    if (!open) {
+      setCopied(false)
+      setRosterOpen(false)
+    }
   }, [open])
 
   if (groupId === null || !group) return null
 
+  const openRoster = () => {
+    // Close details first so nested Dialog overlays (same z-50) do not hide Tip.
+    onOpenChange(false)
+    // Defer open so Radix unmounts the parent overlay before roster mounts.
+    window.setTimeout(() => setRosterOpen(true), 50)
+  }
+
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{group.name}</DialogTitle>
-            <DialogDescription>{group.description || "No description"}</DialogDescription>
+            <DialogDescription>
+              {group.description || "No description"}
+            </DialogDescription>
           </DialogHeader>
 
           <div className="flex flex-wrap gap-2">
@@ -63,8 +76,56 @@ export function GroupDetailsDialog({
             </p>
           </div>
 
+          {/* Inline members + Tip: visible after one tap on Details / roster */}
+          <div className="space-y-2" data-inline-roster>
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-xs font-medium text-muted-foreground">
+                成员 · 打赏
+              </p>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-8 px-2 text-xs"
+                onClick={openRoster}
+              >
+                <Users className="mr-1 h-3.5 w-3.5" />
+                全屏名单
+              </Button>
+            </div>
+            <ul className="max-h-52 space-y-2 overflow-y-auto overscroll-contain">
+              {members.map((member) => (
+                <li
+                  key={member}
+                  className="flex items-center justify-between gap-2 rounded-lg border p-2.5 text-xs"
+                  data-roster-member={member}
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="break-all font-mono text-[11px] leading-snug">
+                      {member}
+                    </p>
+                    {member === group.owner ? (
+                      <Badge className="mt-1" variant="secondary">
+                        Owner
+                      </Badge>
+                    ) : null}
+                  </div>
+                  <TipMemberButton receiverId={member} compact />
+                </li>
+              ))}
+            </ul>
+            <p className="text-[10px] leading-snug text-muted-foreground">
+              打赏是钱包直转 NEAR，不是金库提案。
+            </p>
+          </div>
+
           <div className="grid grid-cols-2 gap-2">
-            <Button variant="outline" size="sm" onClick={() => setRosterOpen(true)}>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={openRoster}
+            >
               <Users className="mr-1.5 h-3.5 w-3.5" /> Roster
             </Button>
             <Button

@@ -1,6 +1,6 @@
 # Mobile 3-account storyboard
 
-Updated: 2026-10-26 ~14:30 Asia/Shanghai
+Updated: 2026-10-27 ~15:30 Asia/Shanghai
 
 ## Accounts
 - **A:** `gv-a-1024-210252.testnet` (~0.67N after TokenWeight beat)
@@ -38,7 +38,7 @@ Updated: 2026-10-26 ~14:30 Asia/Shanghai
 | --- | --- |
 | 103–113 | treasury Transfer#0 → A+B approve → Approved |
 
-## Frames TokenWeight (114–129) — **next=130**
+## Frames TokenWeight (114–129)
 | Frame | Shot |
 | --- | --- |
 | 114 | A-dao-start |
@@ -54,6 +54,32 @@ Updated: 2026-10-26 ~14:30 Asia/Shanghai
 
 ## Scripts
 - `scripts/mobile-3acct-from74.mjs` / `resume92.mjs` / `gov103.mjs` / `mobile-3acct-tw114.mjs`
+
+## Review
+See `REVIEW.md`.
+
+## Frames wrap130 (130–152) — Tip soft-FAIL then fixed @153
+| Frame | Shot |
+| --- | --- |
+| 130 | A-discover |
+| 131 | A-groups |
+| 132 | A-g16-overview |
+| 133–134 | A/B g16-roster (Details only — Tip not yet visible) |
+| 135–136 | A chat / QR |
+| 137–140 | inbox / dao / stake / staking-setup |
+| 141–146 | treasury / proposals / Transfer#5 open→B zero→final **Approved** |
+| 147 | A-roster-tip-ui (Details; Tip missing — soft-FAIL) |
+| 148–152 | chat wrap / C home+chat+QR / A dao end |
+
+## Frames Tip UI fix (153–155) — **next=156**
+| Frame | Shot |
+| --- | --- |
+| 153 | A-g16-details-tip-visible — inline 成员·打赏; Tip for B/C |
+| 154 | A-tip-after-click — tx shown; B +0.01N |
+| 155 | A-roster-full-tip — full roster Tip count=2 |
+
+## Scripts
+- `scripts/mobile-3acct-from74.mjs` / `resume92.mjs` / `gov103.mjs` / `mobile-3acct-tw114.mjs` / `mobile-3acct-wrap130.mjs` / `mobile-3acct-tip153.mjs`
 
 ## Review
 See `REVIEW.md`.

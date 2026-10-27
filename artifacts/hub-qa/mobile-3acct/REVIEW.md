@@ -70,3 +70,30 @@ Viewport: **390×844** · `fullPage: false` · Asia/Shanghai **2026-10-26 ~13:23
 - Proposal bond 1N + staking deploy drained A; B/C topped gas.
 - Indexer still lagging — Transfer finality is on-chain Approved.
 - Jobs IA not restored.
+
+## Continuation 2026-10-26 14:51 CST — wrap130 (frames 130–152)
+
+| Step | Verdict | Notes |
+| --- | --- | --- |
+| Transfer #5 | **PASS** | Approved (TokenWeight); frames 144–146 |
+| tipAB on-chain | **PASS** | 0.01N A→B via near-api (not UI) |
+| Tip UI | **soft-FAIL** | frame 147 Details only; Tip buried in nested Roster |
+| chatWrap | **PASS** | frame 148 |
+| mobile01CanClose | true (acceptance met; Tip UI deferred) |
+
+## Continuation 2026-10-27 15:25 CST — Tip UI fix (frames 153–155)
+
+| Step | Verdict | Notes |
+| --- | --- | --- |
+| Root cause | Details → Roster nesting; Tip only in Members dialog; scripts stopped at Details; nested Dialog same z-50 |
+| Product fix | Inline 成员·打赏 + Tip/打赏 in Details; Roster closes Details then opens full list; Chinese copy |
+| Tip UI | **PASS** | frame 153: Tip visible for B/C; self=自己 disabled |
+| Tip click | **PASS** | frame 154: tx B2QCabYz…; B +0.01N |
+| Full roster Tip | **PASS** | frame 155 count=2 |
+| MOBILE-01 | **可关 / 完成** | mobile01CanClose=true; Tip PASS |
+
+### Kept
+- rpc.ts failover + 网络繁忙 page patch
+- CONVERT_DEPOSIT live 10N
+- Jobs IA bottom-nav **not** restored
+- No original multisig / DeepSeek / force-push
