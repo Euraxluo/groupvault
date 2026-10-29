@@ -28,3 +28,27 @@ test("primary navigation has exactly three Chinese tabs", async ({ page }) => {
   await expect(nav.getByRole("link", { name: "发现" })).toHaveAttribute("href", "/discover")
   await expect(nav.getByRole("link", { name: "我的" })).toHaveAttribute("href", "/me")
 })
+
+test("messages shows bounded real groups with human join fees", async ({ page }) => {
+  await page.goto("/chat")
+
+  await expect(page.getByRole("heading", { level: 1, name: "消息" })).toBeVisible()
+  await expect(page.getByText(/付费进群聊天，成熟了就一键变成 DAO/).first()).toBeVisible()
+  const group16 = page.locator('a[href="/groups/16/chat"]')
+  await expect(group16).toBeVisible()
+  await expect(group16).toContainText("入群费 1 入群币")
+  await expect(page.locator("body")).not.toContainText("1000000 base units")
+  await expect(page.locator("body")).not.toContainText("1000000000000000000000000")
+})
+
+test("discover opens the paid join page instead of chat", async ({ page }) => {
+  await page.goto("/discover")
+
+  await expect(page.getByRole("heading", { level: 1, name: "发现" })).toBeVisible()
+  const group16 = page.locator('a[href="/groups/16/join"]')
+  await expect(group16).toBeVisible()
+  await expect(group16).toContainText("1 入群币")
+  await group16.click()
+  await expect(page).toHaveURL(/\/groups\/16\/join$/)
+  await expect(page.locator("body")).not.toContainText("1000000 base units")
+})
