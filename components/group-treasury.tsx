@@ -12,6 +12,7 @@ import { useDao } from "@/hooks/use-dao"
 import { useVotes } from "@/hooks/use-votes"
 import { fundDao } from "@/lib/near/treasury"
 import { useNearSession } from "@/hooks/use-near-session"
+import { formatNearAmount, parseNearToYocto } from "@/lib/near/format"
 import type { Proposal } from "@/lib/near/sputnik"
 
 export function GroupTreasury({ daoId }: { daoId: string }) {
@@ -19,17 +20,33 @@ export function GroupTreasury({ daoId }: { daoId: string }) {
   const dao = useDao(daoId)
   const votes = useVotes(daoId, [])
   const [receiver, setReceiver] = useState("")
-  const [amount, setAmount] = useState("")
+  const [fundAmountNear, setFundAmountNear] = useState("")
+  const [proposalAmountNear, setProposalAmountNear] = useState("")
   const [description, setDescription] = useState("")
   const [busy, setBusy] = useState<"fund" | "propose" | null>(null)
   const [error, setError] = useState<string | null>(null)
 
+  const parseAmount = (value: string): string | null => {
+    try {
+      const base = parseNearToYocto(value)
+      return BigInt(base) > 0n ? base : null
+    } catch {
+      return null
+    }
+  }
+
+  const fundBaseUnits = parseAmount(fundAmountNear)
+  const proposalBaseUnits = parseAmount(proposalAmountNear)
+
   const fund = async () => {
-    if (!session || !dao.accountId || !/^\d+$/.test(amount)) return
+    if (!session || !dao.accountId || !fundBaseUnits) {
+      setError("请输入有效金额，并连接钱包")
+      return
+    }
     setBusy("fund")
     setError(null)
     try {
-      await fundDao(session.selector, dao.accountId, daoId, amount)
+      await fundDao(session.selector, dao.accountId, daoId, fundBaseUnits)
       await dao.refresh()
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : String(reason))
@@ -39,10 +56,18 @@ export function GroupTreasury({ daoId }: { daoId: string }) {
   }
 
   const propose = async () => {
+    if (!proposalBaseUnits) {
+      setError("请输入有效的提案金额")
+      return
+    }
     setBusy("propose")
     setError(null)
     try {
-      await votes.addTransfer({ receiverId: receiver, amount, description })
+      await votes.addTransfer({
+        receiverId: receiver,
+        amount: proposalBaseUnits,
+        description,
+      })
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : String(reason))
     } finally {
@@ -55,33 +80,37 @@ export function GroupTreasury({ daoId }: { daoId: string }) {
       <Card className="shadow-none">
         <CardHeader className="p-4 pb-2">
           <CardTitle className="flex items-center gap-2 text-sm">
-            <Coins className="h-4 w-4" /> Treasury
+            <Coins className="h-4 w-4" /> 金库
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 p-4 pt-0">
           <p className="text-xs text-muted-foreground">
-            Native Transfer uses token_id=&quot;&quot; and msg=null. The proposal
-            bond must equal get_policy().proposal_bond.
+            向这个 DAO 金库转入 NEAR。提案转账使用原生 NEAR，并由理事会批准后自动执行。
           </p>
           <div className="space-y-1.5">
-            <Label htmlFor="fund-amount">Fund amount (yoctoNEAR)</Label>
+            <Label htmlFor="fund-amount">转入金额（NEAR）</Label>
             <Input
               id="fund-amount"
-              value={amount}
-              inputMode="numeric"
-              onChange={(event) => setAmount(event.target.value)}
-              placeholder="1000000000000000000000000"
+              value={fundAmountNear}
+              inputMode="decimal"
+              onChange={(event) => setFundAmountNear(event.target.value)}
+              placeholder="0.5"
             />
+            <p className="text-[11px] text-muted-foreground">
+              {fundBaseUnits
+                ? `将提交 ${formatNearAmount(fundBaseUnits, 6)} NEAR`
+                : "输入人类可读的 NEAR 金额"}
+            </p>
           </div>
           <Button
             size="sm"
             variant="outline"
             className="w-full"
-            disabled={busy !== null || !dao.accountId || !/^\d+$/.test(amount)}
+            disabled={busy !== null || !dao.accountId || !fundBaseUnits}
             onClick={() => void fund()}
           >
             {busy === "fund" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-            Fund DAO from wallet
+            从钱包转入金库
           </Button>
         </CardContent>
       </Card>
@@ -89,26 +118,31 @@ export function GroupTreasury({ daoId }: { daoId: string }) {
       <Card className="shadow-none">
         <CardHeader className="p-4 pb-2">
           <CardTitle className="flex items-center gap-2 text-sm">
-            <Vote className="h-4 w-4" /> Add native Transfer proposal
+            <Vote className="h-4 w-4" /> 发起转账提案
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 p-4 pt-0">
           <Input
-            placeholder="receiver.testnet"
+            placeholder="接收账户，例如 alice.testnet"
             value={receiver}
             onChange={(event) => setReceiver(event.target.value)}
           />
           <Input
-            placeholder="amount in yoctoNEAR"
-            value={amount}
-            inputMode="numeric"
-            onChange={(event) => setAmount(event.target.value)}
+            placeholder="金额（NEAR）"
+            value={proposalAmountNear}
+            inputMode="decimal"
+            onChange={(event) => setProposalAmountNear(event.target.value)}
           />
           <Input
-            placeholder="description"
+            placeholder="提案说明"
             value={description}
             onChange={(event) => setDescription(event.target.value)}
           />
+          <p className="text-[11px] text-muted-foreground">
+            {proposalBaseUnits
+              ? `提案金额 ${formatNearAmount(proposalBaseUnits, 6)} NEAR`
+              : "原生 NEAR 转账，token_id 为空、msg 为 null"}
+          </p>
           <Button
             size="sm"
             className="w-full"
@@ -117,34 +151,35 @@ export function GroupTreasury({ daoId }: { daoId: string }) {
               !dao.accountId ||
               !receiver.trim() ||
               !description.trim() ||
-              !/^\d+$/.test(amount)
+              !proposalBaseUnits
             }
             onClick={() => void propose()}
           >
-            {busy === "propose" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-            Add Transfer proposal
+            {busy === "propose" ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : null}
+            发起转账提案
           </Button>
           {votes.lastAddedId !== null ? (
             <p className="text-[11px] text-muted-foreground">
-              Proposal{" "}
+              提案{" "}
               <a
                 className="font-mono underline"
                 href={`/dao/${daoId}/proposals/${votes.lastAddedId}`}
               >
                 #{votes.lastAddedId}
               </a>{" "}
-              created. Open it to approve.
+              已创建。打开后可批准。
             </p>
           ) : null}
           <p className="text-[11px] text-muted-foreground">
-            Approval automatically schedules execution at threshold. There is no
-            extra execute signature.
+            达到阈值后自动排期执行，无需额外执行签名。提案押金沿用 DAO 现有策略。
           </p>
         </CardContent>
       </Card>
 
       {votes.error || error ? (
-        <p className="text-xs text-destructive">{error ?? votes.error}</p>
+        <p className="break-words text-xs text-destructive">{error ?? votes.error}</p>
       ) : null}
     </div>
   )
@@ -175,10 +210,10 @@ export function ProposalList({
             </pre>
             <div className="grid grid-cols-2 gap-2">
               <Button size="sm" onClick={() => void onApprove(proposal)}>
-                Approve exact kind
+                批准当前提案
               </Button>
               <Button asChild size="sm" variant="outline">
-                <a href={`/dao/${daoId}/proposals/${proposal.id}`}>Details</a>
+                <a href={`/dao/${daoId}/proposals/${proposal.id}`}>详情</a>
               </Button>
             </div>
           </CardContent>
