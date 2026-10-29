@@ -52,3 +52,24 @@ test("discover opens the paid join page instead of chat", async ({ page }) => {
   await expect(page).toHaveURL(/\/groups\/16\/join$/)
   await expect(page.locator("body")).not.toContainText("1000000 base units")
 })
+
+test("/me renders at phone size with wallet state and QR entry", async ({ page }) => {
+  await page.goto("/me")
+
+  await expect(page.getByRole("heading", { level: 1, name: "我的" })).toBeVisible()
+  await expect(page.getByText("未连接")).toBeVisible()
+  await expect(page.getByText("testnet")).toBeVisible()
+  await expect(page.getByRole("link", { name: /我的二维码/ })).toHaveAttribute(
+    "href",
+    "/me/qr",
+  )
+  await expect(page.getByRole("button", { name: /连接钱包/ })).toBeVisible()
+
+  const nav = page.getByRole("navigation", { name: "Primary" })
+  await expect(nav.getByRole("link")).toHaveCount(3)
+
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+  )
+  expect(overflow).toBe(false)
+})
