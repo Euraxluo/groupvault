@@ -4,7 +4,6 @@ import { use } from "react"
 import {
   ArrowRight,
   Coins,
-  Inbox,
   KeyRound,
   ShieldCheck,
   Vote,
@@ -139,11 +138,6 @@ export default function DaoOverviewPage({
           <Button asChild variant="outline">
             <Link href={`/dao/${daoId}/proposals?ids=${proposalQuery}`}>
               <Vote className="mr-2 h-4 w-4" /> Proposals
-            </Link>
-          </Button>
-          <Button asChild variant="outline">
-            <Link href="/inbox">
-              <Inbox className="mr-2 h-4 w-4" /> Inbox
             </Link>
           </Button>
         </div>

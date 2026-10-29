@@ -19,7 +19,7 @@ export default function MeQrPage() {
         </div>
         <AccountQr />
         <Button asChild variant="outline" className="w-full">
-          <Link href="/inbox">Open inbox</Link>
+          <Link href="/me">返回我的</Link>
         </Button>
       </div>
     </main>

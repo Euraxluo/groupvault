@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Inbox, MessageSquareText, Users, Vote, Wallet } from "lucide-react"
+import { Compass, MessageSquareText, Wallet } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 
@@ -11,29 +11,16 @@ import { useNearWallet } from "@/hooks/use-near-wallet"
 import { cn } from "@/lib/utils"
 
 const navigation = [
-  { href: "/groups", label: "Groups", icon: Users },
-  { href: "/chat", label: "Chat", icon: MessageSquareText },
-  { href: "/dao", label: "DAO", icon: Vote },
-  { href: "/inbox", label: "Inbox", icon: Inbox },
+  { href: "/chat", label: "消息", icon: MessageSquareText },
+  { href: "/discover", label: "发现", icon: Compass },
+  { href: "/me", label: "我的", icon: Wallet },
 ] as const
 
-/** Chat under /groups/:id/chat must light Chat, not Groups. */
+/** Chat under /groups/:id/chat must light 消息. */
 function isNavActive(pathname: string | null, href: string): boolean {
   if (!pathname) return false
   if (href === "/chat") {
     return pathname === "/chat" || /\/groups\/[^/]+\/chat(?:\/|$)/.test(pathname)
-  }
-  if (href === "/groups") {
-    if (pathname === "/groups" || pathname.startsWith("/groups/")) {
-      return !/\/chat(?:\/|$)/.test(pathname)
-    }
-    return false
-  }
-  if (href === "/dao") {
-    return pathname === "/dao" || pathname.startsWith("/dao/")
-  }
-  if (href === "/inbox") {
-    return pathname === "/inbox" || pathname.startsWith("/inbox/")
   }
   return pathname === href || pathname.startsWith(`${href}/`)
 }
@@ -59,14 +46,6 @@ export function MobileNavbar() {
               asChild
               variant="ghost"
               size="sm"
-              className="hidden h-9 min-h-9 rounded-full px-2.5 text-xs sm:inline-flex"
-            >
-              <Link href="/demo">Demo</Link>
-            </Button>
-            <Button
-              asChild
-              variant="ghost"
-              size="sm"
               className="h-9 min-h-9 rounded-full px-2.5 text-xs"
             >
               <Link href="/me/qr">QR</Link>
@@ -80,7 +59,7 @@ export function MobileNavbar() {
             >
               <Wallet className="mr-1.5 h-3.5 w-3.5 shrink-0" />
               <span className="truncate">
-                {wallet.accountId ? shortAccount(wallet.accountId) : "Connect"}
+                {wallet.accountId ? shortAccount(wallet.accountId) : "连接"}
               </span>
             </Button>
           </div>
