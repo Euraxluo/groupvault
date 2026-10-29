@@ -38,6 +38,8 @@ interface KeypairResponse {
   accountId?: unknown
   privateKey?: unknown
   funded?: unknown
+  source?: unknown
+  reason?: unknown
   error?: unknown
 }
 
@@ -104,6 +106,10 @@ export function ConnectWalletDialog({
   const [demoError, setDemoError] = useState<string | null>(null)
   const [accountIdInput, setAccountIdInput] = useState("")
   const [privateKeyInput, setPrivateKeyInput] = useState("")
+  const [fundingNotice, setFundingNotice] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null
+    return window.sessionStorage.getItem("gv.demo.funding-notice")
+  })
 
   const loadAccounts = useCallback(async () => {
     setLoadingAccounts(true)
@@ -156,6 +162,10 @@ export function ConnectWalletDialog({
 
   async function connectExisting(): Promise<void> {
     if (!selectedAccount) return
+    if (typeof window !== "undefined") {
+      window.sessionStorage.removeItem("gv.demo.funding-notice")
+    }
+    setFundingNotice(null)
     setConnectingExisting(true)
     setDemoError(null)
     try {
@@ -203,6 +213,13 @@ export function ConnectWalletDialog({
           errorMessage(payload, "创建演示账号失败，请重试或手动贴 key"),
         )
       }
+      const source = payload.source === "reserve" ? "reserve" : "faucet"
+      const notice =
+        source === "reserve" ? "已从演示储备转入 3N" : "已从水龙头领取 10N"
+      setFundingNotice(notice)
+      if (typeof window !== "undefined") {
+        window.sessionStorage.setItem("gv.demo.funding-notice", notice)
+      }
       await connectCredentials({
         accountId: payload.accountId,
         privateKey: payload.privateKey,
@@ -238,6 +255,14 @@ export function ConnectWalletDialog({
               {wallet.keypairMode ? " · 演示密钥" : ""}
             </p>
             <p className="mt-1 break-all font-mono text-sm">{wallet.accountId}</p>
+            {fundingNotice ? (
+              <p
+                className="mt-2 text-xs text-muted-foreground"
+                data-testid="funding-notice"
+              >
+                {fundingNotice}
+              </p>
+            ) : null}
           </div>
         ) : showKeypair ? (
           <div className="space-y-4 rounded-xl border border-dashed border-border p-4">
@@ -369,7 +394,11 @@ export function ConnectWalletDialog({
                     !accountIdInput.trim() ||
                     !privateKeyInput.trim()
                   }
-                  onClick={() =>
+                  onClick={() => {
+                    if (typeof window !== "undefined") {
+                      window.sessionStorage.removeItem("gv.demo.funding-notice")
+                    }
+                    setFundingNotice(null)
                     void connectCredentials({
                       accountId: accountIdInput,
                       privateKey: privateKeyInput,
@@ -380,7 +409,7 @@ export function ConnectWalletDialog({
                           : "连接演示密钥失败",
                       )
                     })
-                  }
+                  }}
                 >
                   <KeyRound className="mr-2 h-4 w-4" />
                   {wallet.connecting ? "正在连接…" : "连接手动密钥"}
@@ -458,6 +487,10 @@ export function ConnectWalletDialog({
               disabled={signingOut}
               onClick={async () => {
                 setSigningOut(true)
+                if (typeof window !== "undefined") {
+                  window.sessionStorage.removeItem("gv.demo.funding-notice")
+                }
+                setFundingNotice(null)
                 await wallet.disconnect()
                 setSigningOut(false)
                 setShowKeypair(false)

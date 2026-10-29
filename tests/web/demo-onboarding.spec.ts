@@ -68,7 +68,7 @@ test.describe("demo account onboarding", () => {
     await expect(page.locator("#btn-nav-wallet")).toContainText("gv-demo-…estnet")
   })
 
-  test("one-click create shows pending, then connects the funded account", async ({
+  test("one-click create shows pending, then connects the funded account and shows faucet source", async ({
     page,
   }) => {
     let releaseCreate: (() => void) | undefined
@@ -83,6 +83,7 @@ test.describe("demo account onboarding", () => {
         accountId: CREATED_ACCOUNT,
         privateKey: MOCK_PRIVATE_KEY,
         funded: true,
+        source: "faucet",
       })
     })
 
@@ -101,6 +102,38 @@ test.describe("demo account onboarding", () => {
       "title",
       CREATED_ACCOUNT,
     )
+
+    // Reopening the dialog shows the faucet source notice
+    await page.locator("#btn-nav-wallet").click()
+    await expect(page.getByRole("dialog")).toBeVisible()
+    await expect(page.getByText("已从水龙头领取 10N")).toBeVisible()
+  })
+
+  test("one-click create fallback connects and shows reserve source notice", async ({
+    page,
+  }) => {
+    await page.route("**/api/demo/create", async (route) => {
+      await json(route, {
+        accountId: CREATED_ACCOUNT,
+        privateKey: MOCK_PRIVATE_KEY,
+        funded: true,
+        source: "reserve",
+      })
+    })
+
+    await openDemoPanel(page)
+    await page.getByRole("button", { name: "一键创建并连接" }).click()
+
+    await expect(page.getByRole("dialog")).toBeHidden()
+    await expect(page.locator("#btn-nav-wallet")).toHaveAttribute(
+      "title",
+      CREATED_ACCOUNT,
+    )
+
+    // Reopening the dialog shows the reserve fallback notice
+    await page.locator("#btn-nav-wallet").click()
+    await expect(page.getByRole("dialog")).toBeVisible()
+    await expect(page.getByText("已从演示储备转入 3N")).toBeVisible()
   })
 
   test("faucet failure stays visible and does not fabricate a connection", async ({
@@ -122,6 +155,32 @@ test.describe("demo account onboarding", () => {
 
     await expect(page.getByRole("alert")).toContainText(
       "水龙头暂不可用，请重试或手动贴 key",
+    )
+    await expect(page.getByRole("dialog")).toBeVisible()
+    await expect(page.locator("#btn-nav-wallet")).toContainText("连接")
+  })
+
+  test("503 reserve insufficient shows honest retry line and does not connect", async ({
+    page,
+  }) => {
+    await page.route("**/api/demo/create", (route) =>
+      json(
+        route,
+        {
+          funded: false,
+          source: "reserve",
+          reason: "insufficient",
+          error: "储备不足，请稍后再试或手动贴 key",
+        },
+        503,
+      ),
+    )
+
+    await openDemoPanel(page)
+    await page.getByRole("button", { name: "一键创建并连接" }).click()
+
+    await expect(page.getByRole("alert")).toContainText(
+      "储备不足，请稍后再试或手动贴 key",
     )
     await expect(page.getByRole("dialog")).toBeVisible()
     await expect(page.locator("#btn-nav-wallet")).toContainText("连接")

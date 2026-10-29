@@ -13,11 +13,15 @@ import {
   listDemoAccountIds,
   type DemoCredentialsFs,
 } from "@/lib/near/demo-server"
+import { runRefill } from "@/scripts/gas-reserve.mjs"
 
 const KEY_PREFIX = ["ed", "25519:"].join("")
 const TEST_KEYPAIR = KeyPair.fromRandom("ed25519")
 const VALID_PRIVATE_KEY = TEST_KEYPAIR.toString()
 const VALID_PUBLIC_KEY = TEST_KEYPAIR.getPublicKey().toString()
+
+const RESERVE_KEYPAIR = KeyPair.fromRandom("ed25519")
+const RESERVE_ACCOUNT_ID = "gv-gas-reserve.testnet"
 
 function guardedRequest(
   path = "/api/demo/accounts",
@@ -202,62 +206,84 @@ describe("demo account discovery", () => {
   })
 })
 
-describe("one-click demo account honesty", () => {
-  it("surfaces a faucet network failure as funded:false with no credential write", async () => {
-    const { fs, writes } = memoryCredentialsFs({})
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockRejectedValue(new Error("system proxy unavailable")),
+describe("gas reserve refill script", () => {
+  it("refill no-op at target (exit 0 no-op when reserve balance >= target)", async () => {
+    const logs: Record<string, unknown>[] = []
+    const sweepTransfer = vi.fn()
+    const fetchImpl = vi.fn().mockResolvedValue(
+      Response.json({
+        jsonrpc: "2.0",
+        id: "gas-reserve-query",
+        result: { amount: "40000000000000000000000000" }, // 40 NEAR
+      }),
     )
 
-    const response = await createDemo(guardedRequest("/api/demo/create"))
-    expect(response.status).toBe(502)
-    await expect(response.json()).resolves.toMatchObject({
-      funded: false,
-      error: expect.stringContaining("水龙头暂不可用"),
+    const result = await runRefill({
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+      targetN: 40,
+      sweepTransfer,
+      logAppend: async (entry: Record<string, unknown>) => {
+        logs.push(entry)
+      },
     })
 
-    await expect(
-      createFundedDemoAccount({
-        fetchImpl: vi.fn().mockRejectedValue(new Error("system proxy unavailable")) as unknown as typeof fetch,
-        fs,
-        directory: "/tmp/gv-demo-test",
+    expect(result.ok).toBe(true)
+    expect(result.noop).toBe(true)
+    expect(result.balanceN).toBe(40)
+    expect(sweepTransfer).not.toHaveBeenCalled()
+    expect(logs).toContainEqual(
+      expect.objectContaining({
+        action: "refill_noop",
+        balanceN: 40,
+        target: 40,
+        ok: true,
       }),
-    ).rejects.toMatchObject({ funded: false })
-    expect(writes).toHaveLength(0)
+    )
   })
 
-  it("never reports success when the account never appears on RPC", async () => {
-    let clock = 0
-    const fetchImpl = vi
-      .fn()
-      .mockResolvedValueOnce(new Response("ok", { status: 200 }))
-      .mockResolvedValue(
-        Response.json({ jsonrpc: "2.0", id: "gv-demo-onboarding", result: null }),
+  it("claim-failure honesty (mock fetch reject → exits nonzero, no fake sweep)", async () => {
+    const logs: Record<string, unknown>[] = []
+    const sweepTransfer = vi.fn()
+    const fetchImpl = vi.fn((url: string) => {
+      if (url.includes("helper.testnet.near.org")) {
+        return Promise.reject(new Error("system proxy unreachable"))
+      }
+      // RPC check: reserve has 10 NEAR (< 40)
+      return Promise.resolve(
+        Response.json({
+          jsonrpc: "2.0",
+          id: "gas-reserve-query",
+          result: { amount: "10000000000000000000000000" },
+        }),
       )
-    const { fs, writes } = memoryCredentialsFs({})
+    })
 
-    await expect(
-      createFundedDemoAccount({
-        fetchImpl: fetchImpl as typeof fetch,
-        fs,
-        directory: "/tmp/gv-demo-test",
-        now: () => clock,
-        sleep: async (milliseconds) => {
-          clock += milliseconds
-        },
-        timeoutMs: 5_000,
-        intervalMs: 2_000,
+    const result = await runRefill({
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+      targetN: 40,
+      credentialsDir: "/tmp/mock-creds",
+      sweepTransfer,
+      throwOnError: false,
+      logAppend: async (entry: Record<string, unknown>) => {
+        logs.push(entry)
+      },
+    })
+
+    expect(result.ok).toBe(false)
+    expect(result.error).toContain("system proxy unreachable")
+    expect(sweepTransfer).not.toHaveBeenCalled()
+    expect(logs).toContainEqual(
+      expect.objectContaining({
+        action: "claim_error",
+        ok: false,
+        error: expect.stringContaining("system proxy unreachable"),
       }),
-    ).rejects.toMatchObject({
-      name: "DemoApiError",
-      funded: false,
-      message: "水龙头暂不可用，请重试或手动贴 key",
-    } satisfies Partial<DemoApiError>)
-    expect(writes).toHaveLength(0)
+    )
   })
+})
 
-  it("returns the new keypair only after RPC confirms and saves it as 0600", async () => {
+describe("one-click demo account honesty & fallback", () => {
+  it("returns the new keypair with source:faucet when faucet succeeds and saves 0600", async () => {
     const fetchImpl = vi
       .fn()
       .mockResolvedValueOnce(new Response("ok", { status: 200 }))
@@ -281,6 +307,7 @@ describe("one-click demo account honesty", () => {
     })
 
     expect(created.funded).toBe(true)
+    expect(created.source).toBe("faucet")
     expect(created.accountId).toMatch(/^gv-demo-[a-f0-9]{12}\.testnet$/)
     expect(created.privateKey.startsWith(KEY_PREFIX)).toBe(true)
     expect(writes).toEqual([
@@ -294,24 +321,156 @@ describe("one-click demo account honesty", () => {
     expect(chmods).toEqual([
       { filePath: writes[0], mode: 0o600 },
     ])
+  })
 
-    const helperCall = fetchImpl.mock.calls[0]
-    expect(helperCall?.[0]).toBe("https://helper.testnet.near.org/account")
-    const helperBody = JSON.parse(
-      String((helperCall?.[1] as RequestInit | undefined)?.body),
-    ) as { newAccountId: string; newAccountPublicKey: string }
-    expect(helperBody.newAccountId).toBe(created.accountId)
-    expect(helperBody.newAccountPublicKey.startsWith(KEY_PREFIX)).toBe(true)
+  it("create-route fallback: mock faucet fail → reserve create called with 3N", async () => {
+    const logs: Record<string, unknown>[] = []
+    const reserveCreateAccount = vi.fn().mockResolvedValue(undefined)
+    const fetchImpl = vi.fn((url: string) => {
+      if (url.includes("helper.testnet.near.org")) {
+        return Promise.reject(new Error("faucet unavailable"))
+      }
+      // RPC balance query for reserve account: returns 10N
+      return Promise.resolve(
+        Response.json({
+          jsonrpc: "2.0",
+          id: "gv-demo-balance",
+          result: { amount: "10000000000000000000000000" },
+        }),
+      )
+    })
 
-    const rpcCall = fetchImpl.mock.calls[1]
-    expect(rpcCall?.[0]).toBe("https://testnet-rpc.intea.rs")
-    expect(JSON.parse(String((rpcCall?.[1] as RequestInit | undefined)?.body)))
-      .toMatchObject({
-        method: "query",
-        params: {
-          request_type: "view_account",
-          account_id: created.accountId,
+    const { fs, writes, writtenData, chmods } = memoryCredentialsFs({
+      [`${RESERVE_ACCOUNT_ID}.json`]: JSON.stringify({
+        account_id: RESERVE_ACCOUNT_ID,
+        public_key: RESERVE_KEYPAIR.getPublicKey().toString(),
+        private_key: RESERVE_KEYPAIR.toString(),
+      }),
+    })
+
+    const created = await createFundedDemoAccount({
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+      fs,
+      directory: "/tmp/gv-demo-test",
+      reserveAccount: RESERVE_ACCOUNT_ID,
+      grantN: 3,
+      reserveCreateAccount,
+      logAppend: async (entry) => {
+        logs.push(entry)
+      },
+    })
+
+    expect(created.funded).toBe(true)
+    expect(created.source).toBe("reserve")
+    expect(created.accountId).toMatch(/^gv-demo-[a-f0-9]{12}\.testnet$/)
+    expect(created.privateKey.startsWith(KEY_PREFIX)).toBe(true)
+
+    // Reserve account signed createAccount for 3N (3_000_000_000_000_000_000_000_000n)
+    expect(reserveCreateAccount).toHaveBeenCalledTimes(1)
+    const callArgs = reserveCreateAccount.mock.calls[0]![0]
+    expect(callArgs.reserveAccount).toBe(RESERVE_ACCOUNT_ID)
+    expect(callArgs.newAccountId).toBe(created.accountId)
+    expect(callArgs.grantYocto).toBe(3_000_000_000_000_000_000_000_000n)
+
+    // Credential written 0600
+    expect(writes).toEqual([`/tmp/gv-demo-test/${created.accountId}.json`])
+    expect(writtenData[0]?.mode).toBe(0o600)
+    expect(chmods).toEqual([{ filePath: writes[0], mode: 0o600 }])
+
+    // Log recorded grant 3N
+    expect(logs).toContainEqual(
+      expect.objectContaining({
+        action: "grant",
+        from: RESERVE_ACCOUNT_ID,
+        to: created.accountId,
+        amountN: 3,
+        ok: true,
+      }),
+    )
+  })
+
+  it("create-route fallback: reserve low (< grant + 0.5N buffer) → 503 honest error", async () => {
+    const logs: Record<string, unknown>[] = []
+    const reserveCreateAccount = vi.fn()
+    const fetchImpl = vi.fn((url: string) => {
+      if (url.includes("helper.testnet.near.org")) {
+        return Promise.reject(new Error("faucet unavailable"))
+      }
+      // RPC returns 2N (< 3.5N needed buffer)
+      return Promise.resolve(
+        Response.json({
+          jsonrpc: "2.0",
+          id: "gv-demo-balance",
+          result: { amount: "2000000000000000000000000" },
+        }),
+      )
+    })
+
+    const { fs, writes } = memoryCredentialsFs({
+      [`${RESERVE_ACCOUNT_ID}.json`]: JSON.stringify({
+        account_id: RESERVE_ACCOUNT_ID,
+        public_key: RESERVE_KEYPAIR.getPublicKey().toString(),
+        private_key: RESERVE_KEYPAIR.toString(),
+      }),
+    })
+
+    await expect(
+      createFundedDemoAccount({
+        fetchImpl: fetchImpl as unknown as typeof fetch,
+        fs,
+        directory: "/tmp/gv-demo-test",
+        reserveAccount: RESERVE_ACCOUNT_ID,
+        grantN: 3,
+        reserveCreateAccount,
+        logAppend: async (entry) => {
+          logs.push(entry)
         },
-      })
+      }),
+    ).rejects.toMatchObject({
+      name: "DemoApiError",
+      status: 503,
+      funded: false,
+      source: "reserve",
+      reason: "insufficient",
+      message: "储备不足，请稍后再试或手动贴 key",
+    } satisfies Partial<DemoApiError>)
+
+    expect(reserveCreateAccount).not.toHaveBeenCalled()
+    expect(writes).toHaveLength(0)
+    expect(logs).toContainEqual(
+      expect.objectContaining({
+        action: "refuse_insufficient",
+        ok: false,
+      }),
+    )
+  })
+
+  it("POST /api/demo/create route returns 503 honest payload on reserve insufficient", async () => {
+    // Stub fetch so helper fails AND reserve balance is low
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: string) => {
+        if (url.includes("helper.testnet.near.org")) {
+          return Promise.reject(new Error("faucet down"))
+        }
+        return Promise.resolve(
+          Response.json({
+            jsonrpc: "2.0",
+            id: "gv-demo-balance",
+            result: { amount: "1000000000000000000000000" }, // 1 NEAR (< 3.5N)
+          }),
+        )
+      }),
+    )
+
+    const response = await createDemo(guardedRequest("/api/demo/create"))
+    expect(response.status).toBe(503)
+    const body = (await response.json()) as Record<string, unknown>
+    expect(body).toMatchObject({
+      funded: false,
+      source: "reserve",
+      reason: "insufficient",
+      error: "储备不足，请稍后再试或手动贴 key",
+    })
   })
 })

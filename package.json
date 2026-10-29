@@ -20,7 +20,10 @@
     "deploy:testnet": "tsx scripts/deploy-testnet.ts",
     "verify:testnet": "tsx scripts/verify-testnet.ts",
     "verify:demo": "tsx scripts/verify-demo.ts",
-    "build:staking": "bash scripts/build-staking.sh"
+    "build:staking": "bash scripts/build-staking.sh",
+    "gas:reserve": "node scripts/gas-reserve.mjs",
+    "gas:reserve:status": "node scripts/gas-reserve.mjs status",
+    "gas:reserve:refill": "node scripts/gas-reserve.mjs refill"
   },
   "dependencies": {
     "@emotion/is-prop-valid": "latest",

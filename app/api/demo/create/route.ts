@@ -20,7 +20,12 @@ export async function POST(request: Request): Promise<Response> {
   } catch (reason) {
     if (reason instanceof DemoApiError) {
       return demoJson(
-        { funded: reason.funded ?? false, error: reason.message },
+        {
+          funded: reason.funded ?? false,
+          ...(reason.source ? { source: reason.source } : {}),
+          ...(reason.reason ? { reason: reason.reason } : {}),
+          error: reason.message,
+        },
         { status: reason.status },
       )
     }

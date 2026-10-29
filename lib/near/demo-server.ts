@@ -1,9 +1,16 @@
 import { randomBytes } from "node:crypto"
-import { chmod, mkdir, readdir, readFile, writeFile } from "node:fs/promises"
+import {
+  appendFile,
+  chmod,
+  mkdir,
+  readdir,
+  readFile,
+  writeFile,
+} from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 
-import { KeyPair } from "near-api-js"
+import { connect, keyStores, KeyPair, utils } from "near-api-js"
 
 const ALLOWED_HOSTS = new Set(["127.0.0.1:3100", "localhost:3100"])
 const HELPER_ACCOUNT_URL = "https://helper.testnet.near.org/account"
@@ -13,6 +20,15 @@ const ED25519_PREFIX = ["ed", "25519:"].join("")
 const ACCOUNT_POLL_TIMEOUT_MS = 60_000
 const ACCOUNT_POLL_INTERVAL_MS = 2_000
 const RPC_REQUEST_TIMEOUT_MS = 10_000
+
+export const DEFAULT_GAS_RESERVE_ACCOUNT = "gv-gas-reserve.testnet"
+export const DEFAULT_DEMO_GRANT_N = 3
+export const DEFAULT_RESERVE_BUFFER_N = 0.5
+export const DEFAULT_GAS_RESERVE_LOG_PATH = path.join(
+  process.cwd(),
+  "artifacts",
+  "gas-reserve.log",
+)
 
 export interface DemoCredentialsFs {
   readdir(directory: string): Promise<string[]>
@@ -40,12 +56,22 @@ export const nodeDemoCredentialsFs: DemoCredentialsFs = {
 export class DemoApiError extends Error {
   readonly status: number
   readonly funded?: boolean
+  readonly source?: string
+  readonly reason?: string
 
-  constructor(message: string, status = 400, funded?: boolean) {
+  constructor(
+    message: string,
+    status = 400,
+    funded?: boolean,
+    source?: string,
+    reason?: string,
+  ) {
     super(message)
     this.name = "DemoApiError"
     this.status = status
     this.funded = funded
+    this.source = source
+    this.reason = reason
   }
 }
 
@@ -267,7 +293,24 @@ async function saveDemoCredential(
   }
 }
 
-interface CreateDemoOptions {
+export async function appendGasReserveLog(
+  entry: Record<string, unknown>,
+  logPath = DEFAULT_GAS_RESERVE_LOG_PATH,
+): Promise<void> {
+  const line =
+    JSON.stringify({
+      ts: new Date().toISOString(),
+      ...entry,
+    }) + "\n"
+  try {
+    await mkdir(path.dirname(logPath), { recursive: true })
+    await appendFile(logPath, line, "utf8")
+  } catch {
+    // Logging errors must not hide business results
+  }
+}
+
+export interface CreateDemoOptions {
   fetchImpl?: typeof fetch
   sleep?: (milliseconds: number) => Promise<void>
   now?: () => number
@@ -277,6 +320,18 @@ interface CreateDemoOptions {
   rpcUrl?: string
   fs?: DemoCredentialsFs
   directory?: string
+  reserveAccount?: string
+  grantN?: number
+  reserveBufferN?: number
+  reserveCreateAccount?: (input: {
+    reserveAccount: string
+    newAccountId: string
+    publicKey: string
+    grantYocto: bigint
+    rpcUrl: string
+    privateKey: string
+  }) => Promise<void>
+  logAppend?: (entry: Record<string, unknown>) => Promise<void>
 }
 
 async function accountIsFunded(
@@ -313,9 +368,77 @@ async function accountIsFunded(
   }
 }
 
+async function getAccountBalanceYocto(
+  fetchImpl: typeof fetch,
+  rpcUrl: string,
+  accountId: string,
+): Promise<bigint | null> {
+  try {
+    const response = await fetchImpl(rpcUrl, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: "gv-demo-balance",
+        method: "query",
+        params: {
+          request_type: "view_account",
+          finality: "final",
+          account_id: accountId,
+        },
+      }),
+      signal: AbortSignal.timeout(RPC_REQUEST_TIMEOUT_MS),
+    })
+    if (!response.ok) return null
+    const payload = (await response.json()) as {
+      result?: { amount?: unknown }
+    }
+    if (typeof payload.result?.amount === "string") {
+      return BigInt(payload.result.amount)
+    }
+    return null
+  } catch {
+    return null
+  }
+}
+
+async function defaultReserveCreateAccount(input: {
+  reserveAccount: string
+  newAccountId: string
+  publicKey: string
+  grantYocto: bigint
+  rpcUrl: string
+  privateKey: string
+}): Promise<void> {
+  const keyStore = new keyStores.InMemoryKeyStore()
+  await keyStore.setKey(
+    "testnet",
+    input.reserveAccount,
+    KeyPair.fromString(
+      input.privateKey as Parameters<typeof KeyPair.fromString>[0],
+    ),
+  )
+  const near = await connect({
+    networkId: "testnet",
+    nodeUrl: input.rpcUrl,
+    keyStore,
+  })
+  const signer = await near.account(input.reserveAccount)
+  await signer.createAccount(
+    input.newAccountId,
+    input.publicKey,
+    input.grantYocto,
+  )
+}
+
 export async function createFundedDemoAccount(
   options: CreateDemoOptions = {},
-): Promise<{ accountId: string; privateKey: string; funded: true }> {
+): Promise<{
+  accountId: string
+  privateKey: string
+  funded: true
+  source: "faucet" | "reserve"
+}> {
   const fetchImpl = options.fetchImpl ?? fetch
   const sleep =
     options.sleep ??
@@ -333,9 +456,9 @@ export async function createFundedDemoAccount(
   const privateKey = keyPair.toString()
   const publicKey = keyPair.getPublicKey().toString()
 
-  let faucetResponse: Response
+  let faucetSuccess = false
   try {
-    faucetResponse = await fetchImpl(helperUrl, {
+    const faucetResponse = await fetchImpl(helperUrl, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
@@ -344,49 +467,139 @@ export async function createFundedDemoAccount(
       }),
       signal: AbortSignal.timeout(20_000),
     })
-  } catch {
-    throw new DemoApiError(
-      "水龙头暂不可用，请重试或手动贴 key",
-      502,
-      false,
-    )
-  }
-  if (!faucetResponse.ok) {
-    throw new DemoApiError(
-      "水龙头暂不可用，请重试或手动贴 key",
-      502,
-      false,
-    )
-  }
-
-  const deadline = now() + timeoutMs
-  let confirmed = false
-  do {
-    if (await accountIsFunded(fetchImpl, rpcUrl, accountId)) {
-      confirmed = true
-      break
+    if (faucetResponse.ok) {
+      const deadline = now() + timeoutMs
+      do {
+        if (await accountIsFunded(fetchImpl, rpcUrl, accountId)) {
+          faucetSuccess = true
+          break
+        }
+        const remaining = deadline - now()
+        if (remaining <= 0) break
+        await sleep(Math.min(intervalMs, remaining))
+      } while (now() <= deadline)
     }
-    const remaining = deadline - now()
-    if (remaining <= 0) break
-    await sleep(Math.min(intervalMs, remaining))
-  } while (now() <= deadline)
+  } catch {
+    faucetSuccess = false
+  }
 
-  if (!confirmed) {
+  if (faucetSuccess) {
+    await saveDemoCredential(accountId, privateKey, publicKey, fs, directory)
+    return { accountId, privateKey, funded: true, source: "faucet" }
+  }
+
+  // Faucet failed or timed out -> Fallback to local gas reserve
+  const reserveAccount =
+    options.reserveAccount ??
+    process.env.GAS_RESERVE_ACCOUNT?.trim() ??
+    DEFAULT_GAS_RESERVE_ACCOUNT
+  const grantN =
+    options.grantN ??
+    Number(process.env.DEMO_GRANT_N?.trim() || DEFAULT_DEMO_GRANT_N)
+  const reserveBufferN = options.reserveBufferN ?? DEFAULT_RESERVE_BUFFER_N
+  const neededN = grantN + reserveBufferN
+  const grantYocto = BigInt(utils.format.parseNearAmount(String(grantN))!)
+  const neededYocto = BigInt(utils.format.parseNearAmount(String(neededN))!)
+
+  const logAppend = options.logAppend ?? appendGasReserveLog
+
+  // Check reserve balance via RPC
+  const reserveBalanceYocto = await getAccountBalanceYocto(
+    fetchImpl,
+    rpcUrl,
+    reserveAccount,
+  )
+
+  if (reserveBalanceYocto === null || reserveBalanceYocto < neededYocto) {
+    await logAppend({
+      action: "refuse_insufficient",
+      from: reserveAccount,
+      to: accountId,
+      grantN,
+      neededN,
+      balanceN:
+        reserveBalanceYocto !== null
+          ? Number(reserveBalanceYocto / 10n ** 18n) / 1e6
+          : 0,
+      ok: false,
+    })
     throw new DemoApiError(
-      "水龙头暂不可用，请重试或手动贴 key",
-      504,
+      "储备不足，请稍后再试或手动贴 key",
+      503,
       false,
+      "reserve",
+      "insufficient",
     )
   }
 
+  // Read reserve credentials
+  let reserveCredential: { accountId: string; privateKey: string }
+  try {
+    reserveCredential = await loadDemoKeypair(reserveAccount, fs, directory)
+  } catch {
+    await logAppend({
+      action: "refuse_insufficient",
+      from: reserveAccount,
+      to: accountId,
+      error: `Missing credential for reserve account ${reserveAccount}`,
+      ok: false,
+    })
+    throw new DemoApiError(
+      "储备不足，请稍后再试或手动贴 key",
+      503,
+      false,
+      "reserve",
+      "insufficient",
+    )
+  }
+
+  // Reserve signs createAccount(newId, publicKey, 3N)
+  const reserveCreate =
+    options.reserveCreateAccount ?? defaultReserveCreateAccount
+  try {
+    await reserveCreate({
+      reserveAccount,
+      newAccountId: accountId,
+      publicKey,
+      grantYocto,
+      rpcUrl,
+      privateKey: reserveCredential.privateKey,
+    })
+  } catch (createError) {
+    const errorMsg =
+      createError instanceof Error ? createError.message : String(createError)
+    await logAppend({
+      action: "grant_error",
+      from: reserveAccount,
+      to: accountId,
+      amountN: grantN,
+      error: errorMsg,
+      ok: false,
+    })
+    throw new DemoApiError(
+      "演示账号创建失败，请重试或手动贴 key",
+      502,
+      false,
+      "reserve",
+    )
+  }
+
+  // Save new credentials mode 0600
   await saveDemoCredential(accountId, privateKey, publicKey, fs, directory)
-  return { accountId, privateKey, funded: true }
+
+  // Append grant line to artifacts/gas-reserve.log (grant 3N -> accountId)
+  await logAppend({
+    action: "grant",
+    from: reserveAccount,
+    to: accountId,
+    amountN: grantN,
+    ok: true,
+  })
+
+  return { accountId, privateKey, funded: true, source: "reserve" }
 }
 
-export function demoJson(
-  body: unknown,
-  init: ResponseInit = {},
-): Response {
+export function demoJson(body: unknown, init: ResponseInit = {}): Response {
   const headers = new Headers(init.headers)
   headers.set("cache-control", "no-store")
   return Response.json(body, { ...init, headers })
