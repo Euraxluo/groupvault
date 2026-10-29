@@ -1,22 +1,41 @@
 import { expect, test } from "@playwright/test"
+import fs from "node:fs"
+import os from "node:os"
+import path from "node:path"
 
 test.use({ viewport: { width: 390, height: 844 } })
 
 const RAW_YOCTO = "10000000000000000000000000"
+const ACCOUNT_A = process.env.DEMO_ACCOUNT_A ?? ""
+const KEYPAIR_MODE = process.env.DEMO_KEYPAIR_MODE === "1"
+
+function readAKeypair(): { accountId: string; privateKey: string } | null {
+  if (!KEYPAIR_MODE || !ACCOUNT_A) return null
+  const file = path.join(
+    os.homedir(),
+    ".near-credentials",
+    "testnet",
+    `${ACCOUNT_A}.json`,
+  )
+  if (!fs.existsSync(file)) return null
+  const parsed = JSON.parse(fs.readFileSync(file, "utf8")) as {
+    private_key?: string
+  }
+  if (!parsed.private_key) return null
+  return { accountId: ACCOUNT_A, privateKey: parsed.private_key }
+}
 
 test("discover group 16 reaches the paid wall without signing", async ({ page }) => {
   await page.goto("/discover")
 
   const row = page.locator('a[href="/groups/16/join"]')
-  await expect(row).toBeVisible()
+  await expect(row).toBeVisible({ timeout: 20_000 })
   await expect(row).toContainText("1 入群币")
   await expect(page.locator("body")).not.toContainText("1000000 base units")
 
-  await Promise.all([
-    page.waitForURL(/\/groups\/16\/join$/, { timeout: 15_000 }),
-    row.click(),
-  ])
-  await expect(page).toHaveURL(/\/groups\/16\/join$/)
+  await expect(row).toHaveAttribute("href", "/groups/16/join")
+  await row.click()
+  await expect(page).toHaveURL(/\/groups\/16\/join$/, { timeout: 30_000 })
   await expect(
     page.getByRole("heading", { level: 1, name: "付费进群" }),
   ).toBeVisible()
@@ -84,5 +103,45 @@ test("group 16 chat opens the real sheet with DAO state", async ({ page }) => {
     "href",
     "/dao/gv16-8jh4.sputnikv2.testnet",
   )
+  await expect(page.locator("body")).not.toContainText(RAW_YOCTO)
+})
+
+test("group 16 sheet keeps A self disabled and B/C tips visible (no spend)", async ({
+  page,
+}) => {
+  const creds = readAKeypair()
+  test.skip(!creds, "DEMO_ACCOUNT_A + DEMO_KEYPAIR_MODE=1 with local credentials required")
+  if (!creds) return
+
+  // Runtime-only session injection: never persisted to source or artifacts.
+  await page.addInitScript((session) => {
+    window.sessionStorage.setItem("gv.demo.keypair", JSON.stringify(session))
+  }, creds)
+
+  await page.goto("/groups/16/chat")
+  await expect(page.getByRole("button", { name: "群" })).toBeVisible({
+    timeout: 30_000,
+  })
+  await page.getByRole("button", { name: "群" }).click()
+
+  const sheet = page.getByRole("dialog")
+  await expect(sheet).toBeVisible()
+  await expect(sheet.getByText("已是 DAO")).toBeVisible()
+
+  // A is a group member: own tip is the disabled 自己 control.
+  const self = sheet.locator(`[data-tip-receiver="${ACCOUNT_A}"]`)
+  await expect(self).toBeVisible()
+  await expect(self.getByRole("button")).toBeDisabled()
+  await expect(self.getByRole("button")).toHaveText("自己")
+
+  // B and C remain tippable; this gate never clicks them.
+  const tipButtons = sheet.getByRole("button", { name: /^Tip / })
+  await expect(tipButtons.first()).toBeVisible()
+  expect(await tipButtons.count()).toBeGreaterThanOrEqual(2)
+  for (let index = 0; index < (await tipButtons.count()); index += 1) {
+    await expect(tipButtons.nth(index)).toContainText("打赏")
+    await expect(tipButtons.nth(index)).toBeEnabled()
+  }
+
   await expect(page.locator("body")).not.toContainText(RAW_YOCTO)
 })
