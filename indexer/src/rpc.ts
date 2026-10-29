@@ -19,6 +19,7 @@ export class NearRpcClient implements RpcClient {
     private readonly rpcUrl: string,
     private readonly contractId: string,
     private readonly fetchImpl: typeof fetch = fetch,
+    private readonly retryDelayMs = 400,
   ) {}
 
   async call<T>(method: string, params: unknown): Promise<T> {
@@ -37,7 +38,9 @@ export class NearRpcClient implements RpcClient {
         })
         if (response.status === 429 || response.status >= 500) {
           lastError = new Error(`RPC ${method} failed with HTTP ${response.status}`)
-          await new Promise((r) => setTimeout(r, 400 * 2 ** attempt))
+          await new Promise((r) =>
+            setTimeout(r, this.retryDelayMs * 2 ** attempt),
+          )
           continue
         }
         if (!response.ok) {
@@ -51,7 +54,9 @@ export class NearRpcClient implements RpcClient {
       } catch (reason) {
         lastError = reason instanceof Error ? reason : new Error(String(reason))
         if (/HTTP 429|fetch failed|network|timeout/i.test(lastError.message)) {
-          await new Promise((r) => setTimeout(r, 400 * 2 ** attempt))
+          await new Promise((r) =>
+            setTimeout(r, this.retryDelayMs * 2 ** attempt),
+          )
           continue
         }
         throw lastError
@@ -85,19 +90,27 @@ export class NearRpcClient implements RpcClient {
       (chunk) => chunk.tx_root && chunk.tx_root !== EMPTY_ROOT,
     )
 
-    const chunks = await Promise.all(
-      shards.map((chunkRef) =>
-        this.call<{
+    const chunks: {
+      transactions: {
+        hash?: string
+        signer_id: string
+        receiver_id: string
+      }[]
+    }[] = []
+    // Serialize shard reads so a keyless RPC's one-second throttle does not
+    // turn into a burst of 429s. A failed shard must abort the block: treating
+    // it as empty would advance the cursor with messages silently lost.
+    for (const chunkRef of shards) {
+      chunks.push(
+        await this.call<{
           transactions: {
             hash?: string
             signer_id: string
             receiver_id: string
           }[]
-        }>("chunk", { chunk_id: chunkRef.chunk_hash }).catch(() => ({
-          transactions: [],
-        })),
-      ),
-    )
+        }>("chunk", { chunk_id: chunkRef.chunk_hash }),
+      )
+    }
 
     const outcomes: ReceiptOutcome[] = []
     const seen = new Set<string>()
@@ -112,10 +125,17 @@ export class NearRpcClient implements RpcClient {
       }
     }
 
-    // Resolve receipts concurrently; usually 0-1 relevant txs per block.
-    const statuses = await Promise.all(
-      relevant.map((tx) =>
-        this.call<{
+    // Resolve receipts serially for the same rate-limit reason. Usually there
+    // are 0-1 relevant txs per block.
+    const statuses: {
+      receipts_outcome?: {
+        id: string
+        outcome: { executor_id?: string; logs?: string[] }
+      }[]
+    }[] = []
+    for (const tx of relevant) {
+      statuses.push(
+        await this.call<{
           receipts_outcome?: {
             id: string
             outcome: { executor_id?: string; logs?: string[] }
@@ -124,22 +144,22 @@ export class NearRpcClient implements RpcClient {
           tx_hash: tx.hash,
           sender_account_id: tx.signerId,
           wait_until: "FINAL",
-        }).catch(() => ({ receipts_outcome: [] })),
-      ),
-    )
+        }),
+      )
+    }
 
     for (const status of statuses) {
-        for (const receipt of status.receipts_outcome ?? []) {
-          const logs = receipt.outcome?.logs ?? []
-          if (logs.length === 0) continue
-          if (seen.has(receipt.id)) continue
-          seen.add(receipt.id)
-          outcomes.push({
-            receiptId: receipt.id,
-            executorId: receipt.outcome?.executor_id ?? this.contractId,
-            logs,
-          })
-        }
+      for (const receipt of status.receipts_outcome ?? []) {
+        const logs = receipt.outcome?.logs ?? []
+        if (logs.length === 0) continue
+        if (seen.has(receipt.id)) continue
+        seen.add(receipt.id)
+        outcomes.push({
+          receiptId: receipt.id,
+          executorId: receipt.outcome?.executor_id ?? this.contractId,
+          logs,
+        })
+      }
     }
     return outcomes
   }

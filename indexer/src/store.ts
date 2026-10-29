@@ -99,17 +99,11 @@ export class MessageStore {
   }
 
   /**
-   * Insert messages and advance the cursor atomically. Replayed blocks are
-   * idempotent via the `(receipt_id, log_index)` key.
+   * Insert messages and advance the cursor atomically. Replays stay idempotent
+   * via `(receipt_id, log_index)` while also repairing blocks that an older
+   * indexer marked processed without inserting their messages.
    */
   commitBlock(blockHeight: number, messages: IndexedMessage[]): number {
-    if (this.hasBlock(blockHeight)) {
-      // Idempotent replay: never double-count, but keep the cursor current.
-      this.setMeta("last_processed_block", String(blockHeight))
-      this.setMeta("cursor_updated_at_ms", String(Date.now()))
-      return 0
-    }
-
     this.db.exec("BEGIN IMMEDIATE")
     try {
       const insert = this.db.prepare(`

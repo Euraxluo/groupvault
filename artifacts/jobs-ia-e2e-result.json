@@ -1,11 +1,9 @@
 {
-  "status": "partial",
+  "status": "verified",
   "group_id": 18,
   "dao_id": "groupvault-18.sputnikv2.testnet",
   "back_to_chat": true,
-  "indexed_message": false,
-  "reasons": [
-    "indexer has not indexed the message yet (known :8787 lag)"
-  ],
-  "created_at": "2026-10-29T04:16:00.815Z"
+  "indexed_message": true,
+  "reasons": [],
+  "created_at": "2026-10-29T04:44:38.605Z"
 }

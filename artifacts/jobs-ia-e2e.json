@@ -15,24 +15,80 @@
   ],
   "chat_tx": "BkddKpiQvKm6G1uh7SmZagoPnzBdSeynep3kVZGHTXRy",
   "message_on_chain": true,
-  "indexed_message": false,
+  "indexed_message": true,
   "independent_reads": {
     "indexer_health": {
       "ready": true,
-      "last_finalized_block": 275248338,
-      "last_processed_block": 274620987,
-      "cursor_age_ms": 267396505,
-      "error": "RPC block failed with HTTP 422"
+      "last_finalized_block": 275251194,
+      "last_processed_block": 275248217,
+      "cursor_age_ms": 1196,
+      "error": null
     },
     "message_receipt_count": 1,
     "group_owner": "gv-a-1024-210252.testnet",
     "member_is_member": true,
     "dao_policy_roles": 2,
-    "treasury_native_balance": "6000000000000000000000000"
+    "treasury_native_balance": "6000000000000000000000000",
+    "indexer_message": {
+      "group_id": 18,
+      "sender": "gv-a-1024-210252.testnet",
+      "text": "Jobs IA public chat 1793247095372",
+      "ts": "1793247102959171966",
+      "receipt_id": "8TWuh7Ewt963V7Mmxwfj7HRZTtTc49QcSWhLJwYhpj39",
+      "block_height": 275248121,
+      "log_index": 0
+    },
+    "independent_chain_read_at": "2026-10-29T04:43:49.311Z",
+    "independent_chain_rpc": "https://testnet-rpc.intea.rs",
+    "group_chain_read_block": 275251354,
+    "is_member": {
+      "gv-a-1024-210252.testnet": true,
+      "gv-b-1024-210252.testnet": true
+    },
+    "dao_policy_read_block": 275251368,
+    "treasury_read_block": 275251374,
+    "chain_transactions": {
+      "create": {
+        "success": true,
+        "block_hash": "FpMcQ2zwPYynpvUFpDkiLVXc9J9W8dQXvSejLTteC5WG",
+        "status": {
+          "SuccessValue": "MTg="
+        }
+      },
+      "join": {
+        "success": true,
+        "block_hash": "8XPRGqLsYxGayZJaFUN3hwwJof5yAkrKRSGxixZXmPuM",
+        "status": {
+          "SuccessValue": "IjEwMDAwMDAi"
+        }
+      },
+      "chat": {
+        "success": true,
+        "block_hash": "3ipQyMqiuWXUCrDjfYGMRXqCkvQAcoHyXP3H4wUVPK51",
+        "status": {
+          "SuccessValue": ""
+        }
+      },
+      "convert": {
+        "success": true,
+        "block_hash": "Dtvis4NQf1pmpbPew4xoJuzGc8yTeJGvid6PrTs7LQRy",
+        "status": {
+          "SuccessValue": ""
+        }
+      }
+    },
+    "chat_message_receipt": {
+      "receipt_id": "8TWuh7Ewt963V7Mmxwfj7HRZTtTc49QcSWhLJwYhpj39",
+      "executor_id": "gv-deployer-1024-204559-groupvault.testnet",
+      "logs": [
+        "{\"data\":{\"group_id\":18,\"sender\":\"gv-a-1024-210252.testnet\",\"text\":\"Jobs IA public chat 1793247095372\",\"ts\":\"1793247102959171966\"},\"event\":\"message\",\"standard\":\"groupvault\",\"version\":\"0.1.0\"}"
+      ]
+    }
   },
   "convert_tx": "6s9jBh8qbHUJTU5SfqBBLtpadcw5uNz4koGeMhakdZEo",
   "dao_id": "groupvault-18.sputnikv2.testnet",
   "treasury_native_balance": "6000000000000000000000000",
   "back_to_chat": true,
-  "back_url": "http://127.0.0.1:3100/groups/18/chat"
+  "back_url": "http://127.0.0.1:3100/groups/18/chat",
+  "rechecked_at": "2026-10-29T04:44:38.603Z"
 }

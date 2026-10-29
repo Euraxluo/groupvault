@@ -6,6 +6,8 @@ export interface WorkerOptions {
   contractId: string
   startBlock: number | null
   initialBackfillBlocks: number
+  chunkFetchAttempts?: number
+  retryDelayMs?: number
 }
 
 export interface TickResult {
@@ -17,12 +19,17 @@ export interface TickResult {
 export class IndexerWorker {
   private lastFinalizedBlock: number | null = null
   private lastError: string | null = null
+  private readonly chunkFetchAttempts: number
+  private readonly retryDelayMs: number
 
   constructor(
     private readonly store: MessageStore,
     private readonly rpc: RpcClient,
     private readonly options: WorkerOptions,
-  ) {}
+  ) {
+    this.chunkFetchAttempts = Math.max(1, options.chunkFetchAttempts ?? 3)
+    this.retryDelayMs = Math.max(0, options.retryDelayMs ?? 500)
+  }
 
   get health(): {
     ready: boolean
@@ -67,11 +74,9 @@ export class IndexerWorker {
     let processedBlocks = 0
     let insertedMessages = 0
 
-    // Testnet produces ~1 block/s. Fetching blocks strictly sequentially is
-    // slower than that once each block costs several RPC round-trips, so the
-    // cursor falls further behind forever. Fetch a bounded window concurrently
-    // and commit it in ascending order to keep the cursor monotonic.
-    const windowSize = 8
+    // Testnet produces ~1 block/s. A small window keeps pace while limiting
+    // public-RPC bursts; each block is retried before the window is committed.
+    const windowSize = 2
     while (last < head) {
       const heights: number[] = []
       for (
@@ -86,17 +91,18 @@ export class IndexerWorker {
       const fetched = await Promise.allSettled(
         heights.map(async (height) => ({
           height,
-          receipts: await this.rpc.chunkMessages(height),
+          receipts: await this.fetchChunkWithRetry(height),
         })),
       )
 
       // Commit only the contiguous prefix that succeeded. A throttled block
       // (public RPC 429) must not discard the whole window, and the cursor must
       // never skip a gap.
-      let committed = 0
+      let failed = false
       for (const result of fetched) {
         if (result.status === "rejected") {
           this.recordError(result.reason)
+          failed = true
           break
         }
         const { height, receipts } = result.value
@@ -108,10 +114,10 @@ export class IndexerWorker {
         insertedMessages += this.store.commitBlock(height, messages)
         last = height
         processedBlocks += 1
-        committed += 1
       }
-      if (committed === 0) {
-        // Nothing advanced; surface the failure instead of spinning silently.
+      if (failed) {
+        // Commit the safe prefix, then fail this window so the cursor waits at
+        // the gap instead of looping and hammering the throttled block.
         throw new Error(this.lastError ?? "indexer window made no progress")
       }
     }
@@ -122,6 +128,28 @@ export class IndexerWorker {
       insertedMessages,
       lastProcessedBlock: last,
     }
+  }
+
+  private async fetchChunkWithRetry(
+    height: number,
+  ): Promise<Awaited<ReturnType<RpcClient["chunkMessages"]>>> {
+    let lastError: unknown
+    for (let attempt = 0; attempt < this.chunkFetchAttempts; attempt += 1) {
+      try {
+        return await this.rpc.chunkMessages(height)
+      } catch (error) {
+        lastError = error
+        this.recordError(error)
+        if (attempt + 1 < this.chunkFetchAttempts) {
+          await new Promise((resolve) =>
+            setTimeout(resolve, this.retryDelayMs * 2 ** attempt),
+          )
+        }
+      }
+    }
+    throw lastError instanceof Error
+      ? lastError
+      : new Error(`chunk fetch failed for block ${height}`)
   }
 
   recordError(error: unknown): void {

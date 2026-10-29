@@ -5,10 +5,12 @@ import { IndexerWorker } from "../src/worker.js"
 import type { RpcClient, ReceiptOutcome } from "../src/rpc.js"
 
 class FakeRpc implements RpcClient {
+  readonly calls = new Map<number, number>()
+
   constructor(
     public head: number,
     public receipts: Map<number, ReceiptOutcome[]> = new Map(),
-    public failAt: number | null = null,
+    public failuresRemaining: Map<number, number> = new Map(),
   ) {}
 
   async finalBlockHeight(): Promise<number> {
@@ -16,7 +18,12 @@ class FakeRpc implements RpcClient {
   }
 
   async chunkMessages(height: number): Promise<ReceiptOutcome[]> {
-    if (this.failAt === height) throw new Error("rpc boom")
+    this.calls.set(height, (this.calls.get(height) ?? 0) + 1)
+    const remaining = this.failuresRemaining.get(height) ?? 0
+    if (remaining > 0) {
+      this.failuresRemaining.set(height, remaining - 1)
+      throw new Error("rpc boom")
+    }
     return this.receipts.get(height) ?? []
   }
 }
@@ -114,17 +121,73 @@ describe("IndexerWorker", () => {
 
   it("does not advance the cursor when RPC fails", async () => {
     const store = new MessageStore(":memory:")
-    const rpc = new FakeRpc(3, new Map(), 2)
+    const rpc = new FakeRpc(3, new Map(), new Map([[2, Number.POSITIVE_INFINITY]]))
     const worker = new IndexerWorker(store, rpc, {
       contractId: "gv.testnet",
       startBlock: 1,
       initialBackfillBlocks: 0,
+      chunkFetchAttempts: 3,
+      retryDelayMs: 0,
     })
     await worker.initialize()
     await expect(worker.tick()).rejects.toThrow("rpc boom")
     // Only the contiguous prefix before the failure is committed; the cursor
     // must not jump to the finalized head or skip the failed gap.
     expect(store.lastProcessedBlock).toBe(1)
+    expect(rpc.calls.get(2)).toBe(3)
+  })
+
+  it("retries a transient chunk failure and commits its messages", async () => {
+    const store = new MessageStore(":memory:")
+    const rpc = new FakeRpc(
+      2,
+      new Map([
+        [2, [{ receiptId: "r1", executorId: "gv.testnet", logs: [log(1, "kept")] }]],
+      ]),
+      new Map([[2, 1]]),
+    )
+    const worker = new IndexerWorker(store, rpc, {
+      contractId: "gv.testnet",
+      startBlock: 2,
+      initialBackfillBlocks: 0,
+      chunkFetchAttempts: 3,
+      retryDelayMs: 0,
+    })
+
+    await expect(worker.tick()).resolves.toMatchObject({
+      insertedMessages: 1,
+      lastProcessedBlock: 2,
+    })
+    expect(rpc.calls.get(2)).toBe(2)
+    expect(store.page(1, null, 10).items.map((item) => item.text)).toEqual([
+      "kept",
+    ])
+  })
+
+  it("repairs messages when a previously processed block is replayed", async () => {
+    const store = new MessageStore(":memory:")
+    store.initializeCursor(0)
+    store.commitBlock(1, [])
+    // Simulate a cursor rewind after the old run marked the block processed
+    // without inserting its message.
+    store.setMeta("last_processed_block", "0")
+    const rpc = new FakeRpc(
+      1,
+      new Map([
+        [1, [{ receiptId: "r1", executorId: "gv.testnet", logs: [log(1, "recovered")] }]],
+      ]),
+    )
+    const worker = new IndexerWorker(store, rpc, {
+      contractId: "gv.testnet",
+      startBlock: 1,
+      initialBackfillBlocks: 0,
+      retryDelayMs: 0,
+    })
+
+    await worker.tick()
+    expect(store.page(1, null, 10).items.map((item) => item.text)).toEqual([
+      "recovered",
+    ])
   })
 
   it("treats malformed logs as noise instead of crashing", async () => {
