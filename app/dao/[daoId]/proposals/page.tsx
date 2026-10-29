@@ -1,17 +1,21 @@
 "use client"
 
-import { use, useEffect, useState } from "react"
+import { use, useCallback, useEffect, useState } from "react"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import { ArrowRight, Loader2, RotateCw } from "lucide-react"
 
+import type { Proposal } from "@/lib/near/sputnik"
 import { MobileNavbar } from "@/components/mobile-navbar"
 import { ProposalList } from "@/components/group-treasury"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { useDao } from "@/hooks/use-dao"
+import { useNearSession } from "@/hooks/use-near-session"
 import { useVotes } from "@/hooks/use-votes"
+import { getNearConfig } from "@/lib/near/config"
+import { createSputnikClient } from "@/lib/near/sputnik"
+import { NearRpc } from "@/lib/near/rpc"
 
 const LOOKBACK = 10
 
@@ -37,62 +41,108 @@ export default function ProposalsPage({
   const searchParams = useSearchParams()
   const queryValue = searchParams.get("ids") ?? ""
   const requested = parseIds(queryValue)
-  const dao = useDao(daoId)
+  const session = useNearSession()
   const [ids, setIds] = useState<number[]>(requested)
+  const [proposals, setProposals] = useState<Proposal[]>([])
+  const [readError, setReadError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
   const [candidate, setCandidate] = useState("")
+  const [manualId, setManualId] = useState<number | null>(null)
   const [attempt, setAttempt] = useState(0)
-  const [scan, setScan] = useState<{
-    loading: boolean
-    done: boolean
-    error: string | null
-  }>({ loading: true, done: false, error: null })
-  const votes = useVotes(daoId, ids)
+  // Approval still goes through the existing weight-gated hook; this page owns
+  // only the bounded proposal reads.
+  const votes = useVotes(daoId, [])
 
   useEffect(() => {
     const explicit = parseIds(queryValue)
     if (explicit.length > 0) {
       setIds(explicit)
-      setScan({ loading: false, done: true, error: null })
-      return
     }
-    const sputnik = dao.sputnik
-    if (!sputnik) return
+  }, [queryValue])
 
-    let cancelled = false
-    setScan({ loading: true, done: false, error: null })
-    void (async () => {
+  const load = useCallback(
+    async (signal: { cancelled: boolean }) => {
+      if (!session) return
+      const config = getNearConfig()
+      if (!config.groupVaultContractId) {
+        setReadError("群合约尚未配置")
+        setLoading(false)
+        return
+      }
+      setLoading(true)
+      setReadError(null)
+      const client = createSputnikClient(session.selector, new NearRpc(config))
       try {
-        const newest = await sputnik.getNewestProposalId(daoId)
-        if (cancelled) return
-        if (newest < 0) {
-          setIds([])
-        } else {
-          const start = Math.max(0, newest - LOOKBACK + 1)
-          setIds(
-            Array.from({ length: newest - start + 1 }, (_, index) => newest - index),
+        const linkIds = manualId === null ? parseIds(queryValue) : [manualId]
+        let nextIds = linkIds
+        if (nextIds.length === 0) {
+          const newest = await client.getNewestProposalId(daoId)
+          if (signal.cancelled) return
+          nextIds =
+            newest < 0
+              ? []
+              : Array.from(
+                  { length: Math.min(newest + 1, LOOKBACK) },
+                  (_, index) => newest - index,
+                )
+        }
+        // Bounded concurrency: the public testnet RPC 429s a 10-wide burst and
+        // one failure used to discard every successfully read proposal.
+        const loaded: Proposal[] = []
+        let failed = 0
+        let failure: unknown = null
+        let cursor = 0
+        const worker = async () => {
+          while (cursor < nextIds.length && !signal.cancelled) {
+            const id = nextIds[cursor]!
+            cursor += 1
+            try {
+              const proposal = await client.getProposal(daoId, id)
+              if (signal.cancelled) return
+              if (proposal) loaded.push(proposal)
+              else failed += 1
+            } catch (reason) {
+              failed += 1
+              failure = reason
+            }
+          }
+        }
+        await Promise.all(
+          Array.from({ length: Math.min(3, nextIds.length) }, () => worker()),
+        )
+        if (signal.cancelled) return
+        loaded.sort((left, right) => right.id - left.id)
+        setIds(nextIds)
+        setProposals(loaded)
+        if (failed > 0) {
+          const message =
+            failure instanceof Error ? failure.message : String(failure)
+          setReadError(
+            loaded.length === 0
+              ? message
+              : `${failed} 个提案读取失败，已显示其余 ${loaded.length} 个：${message}`,
           )
         }
-        setScan({ loading: false, done: true, error: null })
       } catch (reason) {
-        if (cancelled) return
-        setIds([])
-        setScan({
-          loading: false,
-          done: true,
-          error: reason instanceof Error ? reason.message : String(reason),
-        })
+        if (signal.cancelled) return
+        setProposals([])
+        setReadError(reason instanceof Error ? reason.message : String(reason))
+      } finally {
+        if (!signal.cancelled) setLoading(false)
       }
-    })()
+    },
+    [session, daoId, queryValue, manualId],
+  )
 
+  useEffect(() => {
+    const signal = { cancelled: false }
+    void load(signal)
     return () => {
-      cancelled = true
+      signal.cancelled = true
     }
-  }, [dao.sputnik, daoId, queryValue, attempt])
+  }, [load, attempt])
 
-  const scanFailed = Boolean(scan.error)
-  const empty = scan.done && !scanFailed && ids.length === 0
-  const listLoading =
-    scan.loading || (ids.length > 0 && votes.loading && votes.proposals.length === 0)
+  const empty = !loading && !readError && ids.length === 0
 
   return (
     <main className="min-h-screen bg-background">
@@ -123,7 +173,7 @@ export default function ProposalsPage({
             disabled={!/^\d+$/.test(candidate)}
             onClick={() => {
               const id = Number(candidate)
-              if (!ids.includes(id)) setIds([id, ...ids])
+              setManualId(id)
               setCandidate("")
             }}
           >
@@ -131,18 +181,18 @@ export default function ProposalsPage({
           </Button>
         </div>
 
-        {listLoading ? (
+        {loading ? (
           <p className="flex items-center gap-2 text-sm text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" /> 正在读取链上提案…
           </p>
         ) : null}
 
-        {scanFailed ? (
+        {readError ? (
           <Card className="border-destructive/30 shadow-none">
             <CardContent className="space-y-2 p-4 text-sm">
               <p className="font-medium text-destructive">提案读取失败</p>
               <p className="break-words text-xs text-muted-foreground">
-                {scan.error}
+                {readError}
               </p>
               <Button
                 type="button"
@@ -155,10 +205,6 @@ export default function ProposalsPage({
               </Button>
             </CardContent>
           </Card>
-        ) : null}
-
-        {votes.error && !scanFailed ? (
-          <p className="break-words text-xs text-destructive">{votes.error}</p>
         ) : null}
 
         {empty ? (
@@ -178,13 +224,19 @@ export default function ProposalsPage({
           </Card>
         ) : null}
 
-        {!scanFailed ? (
-          <ProposalList
-            daoId={daoId}
-            proposals={votes.proposals}
-            onApprove={votes.approve}
-          />
+        {votes.error ? (
+          <p className="break-words text-xs text-destructive">{votes.error}</p>
         ) : null}
+
+        <ProposalList
+          daoId={daoId}
+          proposals={proposals}
+          onApprove={async (proposal) => {
+            await votes.approve(proposal)
+            // Re-read the bounded window so the badge reflects chain status.
+            setAttempt((value) => value + 1)
+          }}
+        />
       </div>
     </main>
   )

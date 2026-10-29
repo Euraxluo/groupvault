@@ -29,6 +29,8 @@ test.describe("secondary capabilities after Jobs IA", () => {
   })
 
   test("proposal list scans recent real chain ids", async ({ page }) => {
+    // Public testnet RPC can rate-limit; six real proposal reads need headroom.
+    test.setTimeout(150_000)
     await page.goto(`/dao/${DAO_ID}/proposals`, {
       waitUntil: "domcontentloaded",
     })
@@ -39,7 +41,7 @@ test.describe("secondary capabilities after Jobs IA", () => {
     await expect(page.getByText(/链上最近 10 个提案/)).toBeVisible()
     await expect(page.locator("body")).toContainText(
       /TokenWeight micro Transfer|TokenWeight Transfer|Set GroupVault staking contract|Change policy to TokenWeight/,
-      { timeout: 60_000 },
+      { timeout: 120_000 },
     )
     await expect(
       page.getByRole("link", { name: "详情" }).first(),

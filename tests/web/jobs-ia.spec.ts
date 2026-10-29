@@ -145,3 +145,45 @@ test("group 16 sheet keeps A self disabled and B/C tips visible (no spend)", asy
 
   await expect(page.locator("body")).not.toContainText(RAW_YOCTO)
 })
+
+test("unconverted group shows the real 10 NEAR confirmation without spending", async ({
+  page,
+}) => {
+  // Group 11 is A-owned and has no DAO; this gate reads the confirmation only
+  // and never signs Convert.
+  await page.goto("/groups/11/convert", { waitUntil: "domcontentloaded" })
+
+  await expect(
+    page.getByRole("heading", { level: 1, name: "升级为 DAO" }),
+  ).toBeVisible({ timeout: 30_000 })
+  await expect(page.getByText(/约 10 NEAR/)).toBeVisible()
+  const confirm = page.getByRole("button", { name: "确认升级" })
+  await expect(confirm).toBeVisible()
+  await expect(confirm).toBeDisabled()
+  await expect(page.locator("body")).not.toContainText(RAW_YOCTO)
+  await expect(page.locator("body")).not.toContainText("yoctoNEAR")
+  await expect(page.getByText(/已是 DAO/)).toHaveCount(0)
+})
+
+test("converted treasury glance shows real DAO state and returns to chat", async ({
+  page,
+}) => {
+  await page.goto(
+    "/dao/gv16-8jh4.sputnikv2.testnet/treasury?from=convert&groupId=16",
+    { waitUntil: "domcontentloaded" },
+  )
+
+  await expect(
+    page.getByRole("heading", { level: 1, name: "升级成功" }),
+  ).toBeVisible({ timeout: 30_000 })
+  await expect(page.getByText("DAO 金库余额")).toBeVisible()
+  await expect(page.getByText(/正在读取链上余额|NEAR|余额暂不可用/).first()).toBeVisible({
+    timeout: 30_000,
+  })
+  await expect(page.locator("body")).not.toContainText(RAW_YOCTO)
+
+  const back = page.getByRole("link", { name: "回到聊天" }).first()
+  await expect(back).toHaveAttribute("href", "/groups/16/chat")
+  await back.click()
+  await expect(page).toHaveURL(/\/groups\/16\/chat$/)
+})

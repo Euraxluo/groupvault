@@ -34,11 +34,14 @@ test("messages shows bounded real groups with human join fees", async ({ page })
 
   await expect(page.getByRole("heading", { level: 1, name: "消息" })).toBeVisible()
   await expect(page.getByText(/付费进群聊天，成熟了就一键变成 DAO/).first()).toBeVisible()
+  await expect(page.getByText(/当前合约最近 \d+ 个群/)).toBeVisible()
+  await expect(page.getByText(/尚未按成员关系过滤/)).toBeVisible()
   const group16 = page.locator('a[href="/groups/16/chat"]')
   await expect(group16).toBeVisible()
   await expect(group16).toContainText("入群费 1 入群币")
   await expect(page.locator("body")).not.toContainText("1000000 base units")
   await expect(page.locator("body")).not.toContainText("1000000000000000000000000")
+  await expect(page.locator("body")).not.toContainText("yoctoNEAR")
 })
 
 test("discover opens the paid join page instead of chat", async ({ page }) => {
