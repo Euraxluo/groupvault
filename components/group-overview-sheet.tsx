@@ -159,12 +159,25 @@ export function GroupOverviewSheet({
               )}
 
               {group.dao_id ? (
-                <Button asChild className="h-12 min-h-12 w-full rounded-xl text-base">
-                  <Link href={`/dao/${group.dao_id}`}>
-                    金库与投票
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Link>
-                </Button>
+                <>
+                  <Button asChild className="h-12 min-h-12 w-full rounded-xl text-base">
+                    <Link href={`/dao/${group.dao_id}`}>
+                      金库与投票
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Link>
+                  </Button>
+                  <div className="grid grid-cols-3 gap-2">
+                    <Button asChild variant="outline" size="sm">
+                      <Link href={`/dao/${group.dao_id}/treasury`}>金库</Link>
+                    </Button>
+                    <Button asChild variant="outline" size="sm">
+                      <Link href={`/dao/${group.dao_id}/proposals`}>提案</Link>
+                    </Button>
+                    <Button asChild variant="outline" size="sm">
+                      <Link href={`/dao/${group.dao_id}/stake`}>质押</Link>
+                    </Button>
+                  </div>
+                </>
               ) : null}
 
               {isOwner && !group.dao_id && !group.convert_pending ? (

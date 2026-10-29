@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test"
 
 test.use({ viewport: { width: 390, height: 844 } })
 
-for (const legacy of ["/", "/groups", "/dao", "/demo"]) {
+for (const legacy of ["/", "/groups", "/dao", "/demo", "/inbox"]) {
   test(`${legacy} redirects to /chat`, async ({ page }) => {
     await page.goto(legacy)
     await expect(page).toHaveURL(/\/chat$/)

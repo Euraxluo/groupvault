@@ -146,6 +146,18 @@ describe("group overview sheet", () => {
       "href",
       "/dao/gv16-8jh4.sputnikv2.testnet",
     )
+    expect(screen.getByRole("link", { name: "金库" })).toHaveAttribute(
+      "href",
+      "/dao/gv16-8jh4.sputnikv2.testnet/treasury",
+    )
+    expect(screen.getByRole("link", { name: "提案" })).toHaveAttribute(
+      "href",
+      "/dao/gv16-8jh4.sputnikv2.testnet/proposals",
+    )
+    expect(screen.getByRole("link", { name: "质押" })).toHaveAttribute(
+      "href",
+      "/dao/gv16-8jh4.sputnikv2.testnet/stake",
+    )
     expect(screen.queryByRole("link", { name: /升级为 DAO/ })).not.toBeInTheDocument()
   })
 

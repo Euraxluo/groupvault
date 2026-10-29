@@ -1,94 +1,105 @@
 import { expect, test } from "@playwright/test"
 
-import { DEMO_STORY } from "../../lib/demo-story"
+const GROUP_ID = 16
+const DAO_ID = "gv16-8jh4.sputnikv2.testnet"
 
-test.describe("storyline click-through surfaces", () => {
-  test("demo rail and every story route render a primary CTA", async ({
+test.describe("secondary capabilities after Jobs IA", () => {
+  test("DAO hub keeps treasury, proposals, staking and stake links", async ({
     page,
   }) => {
-    test.setTimeout(120_000)
-    await page.goto("/demo", { waitUntil: "domcontentloaded" })
-    await expect(
-      page.getByRole("heading", { level: 1, name: /Demo story/i }),
-    ).toBeVisible()
-    await expect(page.locator("#demo-story-rail")).toBeVisible()
-    await expect(page.getByRole("link", { name: /Join group/i })).toBeVisible()
+    await page.goto(`/dao/${DAO_ID}`, { waitUntil: "domcontentloaded" })
 
+    await expect(
+      page.getByRole("heading", { level: 1, name: /DAO/ }),
+    ).toBeVisible()
+    await expect(page.getByRole("link", { name: /质押设置/ })).toHaveAttribute(
+      "href",
+      `/dao/${DAO_ID}/staking/setup`,
+    )
+    await expect(
+      page.getByRole("link", { name: /质押 \/ 委托/ }),
+    ).toHaveAttribute("href", `/dao/${DAO_ID}/stake`)
+    await expect(
+      page.getByRole("link", { name: /金库与转账/ }),
+    ).toHaveAttribute("href", `/dao/${DAO_ID}/treasury`)
+    await expect(page.getByRole("link", { name: /提案/ })).toHaveAttribute(
+      "href",
+      `/dao/${DAO_ID}/proposals`,
+    )
+  })
+
+  test("proposal list scans recent real chain ids", async ({ page }) => {
+    await page.goto(`/dao/${DAO_ID}/proposals`, {
+      waitUntil: "domcontentloaded",
+    })
+
+    await expect(
+      page.getByRole("heading", { level: 1, name: "提案" }),
+    ).toBeVisible()
+    await expect(page.getByText(/链上最近 10 个提案/)).toBeVisible()
+    await expect(page.locator("body")).toContainText(
+      /TokenWeight micro Transfer|TokenWeight Transfer|Set GroupVault staking contract|Change policy to TokenWeight/,
+      { timeout: 60_000 },
+    )
+    await expect(
+      page.getByRole("link", { name: "详情" }).first(),
+    ).toHaveAttribute("href", new RegExp(`^/dao/${DAO_ID}/proposals/\\d+$`))
+    await expect(page.locator("body")).not.toContainText("groupvault-13")
+  })
+
+  test("staking, treasury, QR and paid Join stay reachable", async ({ page }) => {
     const checks: { path: string; heading: RegExp; cta: RegExp }[] = [
-      { path: "/", heading: /Paid group → chat → Convert → stake/i, cta: /Demo story/i },
-      { path: "/groups/new", heading: /New group/i, cta: /Open create form|Create/i },
-      { path: "/groups", heading: /Groups/i, cta: /New/i },
-      { path: "/discover", heading: /Discover/i, cta: /New|My groups/i },
       {
-        path: `/groups/${DEMO_STORY.groupId}/join`,
-        heading: /Paid join/i,
-        cta: /Pay and join|Owner is already|Connect a wallet|Continue to overview|Group not found|Enter a group/i,
-      },
-      {
-        path: `/groups/${DEMO_STORY.groupId}`,
-        heading: /.+/,
-        cta: /Chat|Paid join|Convert|Open DAO|Back to groups|Details/i,
-      },
-      {
-        path: `/groups/${DEMO_STORY.groupId}/chat`,
-        heading: /.+/,
-        cta: /Send|Connect to chat|Connect wallet|Pay and join|Join to send|Group overview|indexing/i,
-      },
-      {
-        path: `/groups/${DEMO_STORY.groupId}/convert`,
-        heading: /Convert|DAO/i,
-        cta: /Convert with wallet|Open DAO|Refresh|Back/i,
-      },
-      {
-        path: `/dao/${DEMO_STORY.daoId}`,
-        heading: /DAO/i,
-        cta: /Staking setup|Stake|Treasury|Proposals|Inbox/i,
-      },
-      {
-        path: `/dao/${DEMO_STORY.daoId}/staking/setup`,
-        heading: /Staking setup/i,
+        path: `/dao/${DAO_ID}/staking/setup`,
+        heading: /Staking setup/,
         cta: /SetStaking|TokenWeight|Storage deposit|Connect/i,
       },
       {
-        path: `/dao/${DEMO_STORY.daoId}/stake`,
-        heading: /Stake/i,
+        path: `/dao/${DAO_ID}/stake`,
+        heading: /Stake/,
         cta: /Storage deposit|Delegate|Staking setup|not set/i,
       },
       {
-        path: `/dao/${DEMO_STORY.daoId}/treasury`,
-        heading: /DAO treasury|treasury/i,
-        cta: /Fund DAO|Add Transfer|Transfer/i,
+        path: `/dao/${DAO_ID}/treasury`,
+        heading: /金库|treasury/i,
+        cta: /从钱包转入金库|添加转账提案|转入金额/,
       },
       {
-        path: `/dao/${DEMO_STORY.daoId}/proposals?ids=${DEMO_STORY.proposalIds.join(",")}`,
-        heading: /Proposals/i,
-        cta: /Load|Approve|Details/i,
+        path: "/me/qr",
+        heading: /我的二维码/,
+        cta: /返回我的|Connect|扫码/,
       },
       {
-        path: `/dao/${DEMO_STORY.daoId}/proposals/${DEMO_STORY.transferProposalId}`,
-        heading: /Proposal #/i,
-        cta: /Approve exact kind|Proposal not found|Connect/i,
+        path: `/groups/${GROUP_ID}/join`,
+        heading: /付费进群/,
+        cta: /入群币|群主已是成员|先连接钱包/,
       },
-      { path: "/me/qr", heading: /QR card/i, cta: /Connect|Copy account|Open inbox/i },
-      { path: "/inbox", heading: /Inbox/i, cta: /Open \/ vote|Create a Transfer|Connect a wallet|Pending/i },
+      {
+        path: `/groups/${GROUP_ID}/convert`,
+        heading: /升级为 DAO|已是 DAO|Convert/i,
+        cta: /确认升级|查看金库|回到群聊|Open DAO|Refresh|Back/i,
+      },
     ]
 
     for (const check of checks) {
       await page.goto(check.path, { waitUntil: "domcontentloaded" })
-      await expect(
-        page.getByRole("heading", { level: 1 }).first(),
-      ).toBeVisible({ timeout: 30_000 })
+      await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible({
+        timeout: 30_000,
+      })
       await expect(page.getByText(check.cta).first()).toBeVisible({
         timeout: 30_000,
       })
     }
   })
 
-  test("navbar exposes Groups Chat DAO Inbox", async ({ page }) => {
-    await page.goto("/demo")
-    await expect(page.getByRole("navigation").getByText("Groups")).toBeVisible()
-    await expect(page.getByRole("navigation").getByText("Chat")).toBeVisible()
-    await expect(page.getByRole("navigation").getByText("DAO")).toBeVisible()
-    await expect(page.getByRole("navigation").getByText("Inbox")).toBeVisible()
+  test("legacy inbox redirects and is not a capability entry", async ({
+    page,
+  }) => {
+    await page.goto("/inbox")
+    await expect(page).toHaveURL(/\/chat$/)
+
+    const nav = page.getByRole("navigation", { name: "Primary" })
+    await expect(nav.getByRole("link")).toHaveCount(3)
+    await expect(nav).not.toContainText("Inbox")
   })
 })

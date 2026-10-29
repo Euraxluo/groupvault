@@ -15,7 +15,6 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useDao } from "@/hooks/use-dao"
-import { DEMO_STORY } from "@/lib/demo-story"
 
 export default function DaoOverviewPage({
   params,
@@ -24,14 +23,13 @@ export default function DaoOverviewPage({
 }) {
   const { daoId } = use(params)
   const dao = useDao(daoId)
-  const proposalQuery = DEMO_STORY.proposalIds.join(",")
 
   return (
     <main className="min-h-screen bg-background">
       <MobileNavbar />
       <div className="mx-auto w-full max-w-lg space-y-4 px-4 pb-28 pt-20">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">DAO</h1>
+          <h1 className="text-2xl font-bold tracking-tight">DAO 总览</h1>
           <p className="mt-1 break-all font-mono text-[11px] text-muted-foreground">
             {daoId}
           </p>
@@ -58,7 +56,7 @@ export default function DaoOverviewPage({
             <CardContent className="p-4">
               <Vote className="h-4 w-4 text-primary" />
               <p className="mt-3 text-[10px] uppercase text-muted-foreground">
-                Vote policy
+                投票规则
               </p>
               <p className="text-sm font-bold">
                 {dao.error ? "—" : (dao.policy?.default_vote_policy.weight_kind ?? (dao.loading ? "Loading…" : "—"))}
@@ -69,7 +67,7 @@ export default function DaoOverviewPage({
             <CardContent className="p-4">
               <Coins className="h-4 w-4 text-emerald-600" />
               <p className="mt-3 text-[10px] uppercase text-muted-foreground">
-                Your delegation
+                你的委托
               </p>
               <p className="truncate text-sm font-bold">{dao.delegation}</p>
             </CardContent>
@@ -79,22 +77,22 @@ export default function DaoOverviewPage({
         <Card className="shadow-none">
           <CardHeader className="p-4 pb-2">
             <CardTitle className="flex items-center gap-2 text-sm">
-              <KeyRound className="h-4 w-4" /> Staking
+              <KeyRound className="h-4 w-4" /> 质押
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 p-4 pt-0 text-xs">
             <p className="text-muted-foreground">
               {dao.error
-                ? "Could not load staking status (RPC). Retry above — do not treat this as unset."
+                ? "质押状态读取失败，请重试；不要把它当作未设置。"
                 : dao.loading
-                  ? "Loading staking contract…"
+                  ? "正在读取质押合约…"
                   : dao.stakingContract
-                    ? "Staking is set. Voting weight comes only from the join FT."
-                    : "Staking is not set yet. The council must approve SetStakingContract first."}
+                    ? "质押已设置，投票权重只来自入群币质押。"
+                    : "还未设置质押；理事会需先批准 SetStakingContract。"}
             </p>
             <p className="break-all font-mono">
               {dao.error
-                ? "status unknown"
+                ? "状态未知"
                 : dao.loading
                   ? "…"
                   : (dao.stakingContract ?? "not set")}
@@ -109,12 +107,12 @@ export default function DaoOverviewPage({
               }
             >
               {dao.error
-                ? "Load error"
+                ? "读取失败"
                 : dao.loading
-                  ? "Loading"
+                  ? "加载中"
                   : dao.stakingContract
-                    ? "Ready"
-                    : "Setup required"}
+                    ? "已就绪"
+                    : "待设置"}
             </Badge>
           </CardContent>
         </Card>
@@ -122,22 +120,22 @@ export default function DaoOverviewPage({
         <div className="grid gap-2">
           <Button asChild>
             <Link href={`/dao/${daoId}/staking/setup`}>
-              <ShieldCheck className="mr-2 h-4 w-4" /> Staking setup
+              <ShieldCheck className="mr-2 h-4 w-4" /> 质押设置
             </Link>
           </Button>
           <Button asChild variant="outline">
             <Link href={`/dao/${daoId}/stake`}>
-              <Coins className="mr-2 h-4 w-4" /> Stake / delegate
+              <Coins className="mr-2 h-4 w-4" /> 质押 / 委托
             </Link>
           </Button>
           <Button asChild variant="outline">
             <Link href={`/dao/${daoId}/treasury`}>
-              Treasury and Transfer <ArrowRight className="ml-2 h-4 w-4" />
+              金库与转账 <ArrowRight className="ml-2 h-4 w-4" />
             </Link>
           </Button>
           <Button asChild variant="outline">
-            <Link href={`/dao/${daoId}/proposals?ids=${proposalQuery}`}>
-              <Vote className="mr-2 h-4 w-4" /> Proposals
+            <Link href={`/dao/${daoId}/proposals`}>
+              <Vote className="mr-2 h-4 w-4" /> 提案
             </Link>
           </Button>
         </div>
