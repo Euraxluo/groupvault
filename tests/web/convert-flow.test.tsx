@@ -3,10 +3,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 const submit = vi.fn()
 const refresh = vi.fn()
+const push = vi.fn()
 let state: Record<string, unknown>
 
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: vi.fn() }),
+  useRouter: () => ({ push }),
   usePathname: () => "/",
 }))
 
@@ -50,41 +51,62 @@ beforeEach(() => {
 })
 
 describe("Convert screen", () => {
-  it("states that Convert is not a threshold ceremony", async () => {
+  it("shows human 10 NEAR and no threshold ceremony language", async () => {
     await page()
-    expect(await screen.findByText(/not a threshold ceremony/i)).toBeInTheDocument()
+    expect(await screen.findByText("约 10 NEAR")).toBeInTheDocument()
+    expect(screen.getByText(/群主 1 签/)).toBeInTheDocument()
+    expect(screen.queryByText(/10000000000000000000000000/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/yoctoNEAR/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Sputnik/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/threshold/i)).not.toBeInTheDocument()
     expect(screen.queryByText(/DKG participant/i)).not.toBeInTheDocument()
   })
 
-  it("submits one owner Convert with the unqualified DAO name", async () => {
-    submit.mockResolvedValue(undefined)
+  it("routes to treasury with the exact confirmed DAO id", async () => {
+    submit.mockResolvedValue("builders.sputnikv2.testnet")
     await page()
-    fireEvent.change(await screen.findByLabelText("DAO name"), {
+    fireEvent.change(await screen.findByLabelText("DAO 名称"), {
       target: { value: "builders" },
     })
-    fireEvent.click(screen.getByRole("button", { name: /Convert with wallet/i }))
+    fireEvent.click(screen.getByRole("button", { name: "确认升级" }))
     await waitFor(() =>
       expect(submit).toHaveBeenCalledWith(
         "builders",
-        "Paid group converting to a DAO",
+        "付费群升级为 DAO",
+      ),
+    )
+    await waitFor(() =>
+      expect(push).toHaveBeenCalledWith(
+        "/dao/builders.sputnikv2.testnet/treasury?from=convert&groupId=3",
       ),
     )
   })
 
+  it("never pushes when the confirmed id is missing", async () => {
+    submit.mockRejectedValue(new Error("升级确认超时：尚未读到链上 DAO ID"))
+    state = { ...state, error: "升级确认超时：尚未读到链上 DAO ID" }
+    await page()
+    fireEvent.click(screen.getByRole("button", { name: "确认升级" }))
+    await waitFor(() => expect(submit).toHaveBeenCalled())
+    expect(push).not.toHaveBeenCalled()
+  })
+
   it("rejects invalid DAO names before the wallet", async () => {
     await page()
-    fireEvent.change(await screen.findByLabelText("DAO name"), {
+    fireEvent.change(await screen.findByLabelText("DAO 名称"), {
       target: { value: "Bad.Name" },
     })
-    fireEvent.click(screen.getByRole("button", { name: /Convert with wallet/i }))
-    expect(await screen.findByText(/lowercase letters/i)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole("button", { name: "确认升级" }))
+    expect(await screen.findByText(/只能包含/)).toBeInTheDocument()
     expect(submit).not.toHaveBeenCalled()
+    expect(push).not.toHaveBeenCalled()
   })
 
   it("shows pending without inventing dao_id", async () => {
     state = { ...state, canConvert: false, pending: true, reason: "A Convert is already pending" }
     await page()
-    expect(await screen.findByText(/Conversion pending/i)).toBeInTheDocument()
+    expect(await screen.findByText(/升级确认中/)).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "确认升级" })).toBeDisabled()
     expect(screen.queryByText(/sputnikv2.testnet/)).not.toBeInTheDocument()
   })
 
@@ -95,10 +117,12 @@ describe("Convert screen", () => {
       group: { ...(state.group as object), dao_id: "builders.sputnikv2.testnet" },
     }
     await page()
-    expect(await screen.findByText(/builders.sputnikv2.testnet/)).toBeInTheDocument()
-    expect(screen.getByRole("link", { name: /Open DAO setup/i })).toHaveAttribute(
+    expect(await screen.findByText("已是 DAO")).toBeInTheDocument()
+    expect(screen.getByText(/builders.sputnikv2.testnet/)).toBeInTheDocument()
+    expect(screen.getByRole("link", { name: /查看金库/ })).toHaveAttribute(
       "href",
-      "/dao/builders.sputnikv2.testnet",
+      "/dao/builders.sputnikv2.testnet/treasury?from=convert&groupId=3",
     )
+    expect(screen.queryByRole("button", { name: "确认升级" })).not.toBeInTheDocument()
   })
 })

@@ -1,7 +1,8 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { ArrowLeft, KeyRound, ShieldAlert, ShieldCheck } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { ArrowLeft, ChevronRight, KeyRound, ShieldAlert, ShieldCheck } from "lucide-react"
 import Link from "next/link"
 
 import { MobileNavbar } from "@/components/mobile-navbar"
@@ -13,6 +14,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { useConvert } from "@/hooks/use-convert"
 import { CONVERT_DEPOSIT } from "@/lib/near/deposits"
+import { formatNearAmount } from "@/lib/near/format"
 
 export function ConvertForm({
   groupId,
@@ -21,9 +23,10 @@ export function ConvertForm({
   groupId: number
   groupIdText?: string
 }) {
+  const router = useRouter()
   const convert = useConvert(groupId)
   const [daoName, setDaoName] = useState("")
-  const [purpose, setPurpose] = useState("Paid group converting to a DAO")
+  const [purpose, setPurpose] = useState("付费群升级为 DAO")
   const [localError, setLocalError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -35,14 +38,19 @@ export function ConvertForm({
   const submit = async () => {
     setLocalError(null)
     if (!/^[a-z0-9_-]{1,32}$/.test(daoName)) {
-      setLocalError("DAO name must be 1-32 lowercase letters, digits, - or _")
+      setLocalError("DAO 名称只能包含 1–32 位小写字母、数字、- 或 _")
       return
     }
+    let daoId: string
     try {
-      await convert.submit(daoName, purpose)
+      daoId = await convert.submit(daoName, purpose)
     } catch {
       // The hook surfaces the actual wallet/RPC failure.
+      return
     }
+    router.push(
+      `/dao/${encodeURIComponent(daoId)}/treasury?from=convert&groupId=${encodeURIComponent(groupIdText)}`,
+    )
   }
 
   return (
@@ -50,32 +58,34 @@ export function ConvertForm({
       <MobileNavbar />
       <div className="mx-auto w-full max-w-lg px-4 pb-28 pt-20">
         <Button asChild variant="ghost" size="sm" className="mb-3 -ml-2">
-          <Link href={`/groups/${groupIdText}`}>
-            <ArrowLeft className="mr-1.5 h-4 w-4" /> Group
+          <Link href={`/groups/${groupIdText}/chat`}>
+            <ArrowLeft className="mr-1.5 h-4 w-4" />
+            回到群聊
           </Link>
         </Button>
 
-        <div className="mb-4 flex items-start justify-between">
+        <div className="mb-4 flex items-start justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Convert to DAO</h1>
+            <h1 className="text-2xl font-bold tracking-tight">升级为 DAO</h1>
             <p className="mt-1 text-xs text-muted-foreground">
-              One owner signature. GroupVault calls Sputnik factory.create.
+              由群主一次签名完成，成员成为初始理事会。升级后群聊不变，额外获得金库与投票。
             </p>
           </div>
-          <KeyRound className="h-6 w-6 text-primary" />
+          <KeyRound className="h-6 w-6 shrink-0 text-primary" />
         </div>
 
-        <Card className="mb-4 border-primary/20 bg-primary/5 shadow-none">
+        <Card className="mb-4 shadow-none">
           <CardContent className="space-y-2 p-4 text-xs">
-            <p className="font-medium">This is not a threshold ceremony.</p>
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-muted-foreground">需要准备</span>
+              <span className="font-semibold">
+                约 {formatNearAmount(CONVERT_DEPOSIT)} NEAR
+              </span>
+            </div>
             <p className="text-muted-foreground">
-              One owner signature creates the DAO. No key ceremony or key
-              resharing is involved; the current members become the initial
-              Sputnik council snapshot (up to 50).
+              这包含创建 DAO 所需的押金与手续费。交易失败或余额不足时不会创建 DAO。
             </p>
-            <Badge variant="outline" className="font-mono">
-              deposit {CONVERT_DEPOSIT} yoctoNEAR
-            </Badge>
+            <Badge variant="outline">群主 1 签 · 无需多人或门限签名</Badge>
           </CardContent>
         </Card>
 
@@ -84,23 +94,30 @@ export function ConvertForm({
             <CardHeader className="p-4 pb-1">
               <CardTitle className="flex items-center gap-2 text-sm">
                 <ShieldCheck className="h-4 w-4 text-emerald-700" />
-                Converted
+                已是 DAO
               </CardTitle>
             </CardHeader>
-            <CardContent className="p-4 pt-1 text-xs">
-              <p className="break-all font-mono">{convert.group.dao_id}</p>
-              <Button asChild size="sm" className="mt-3">
-                <Link href={`/dao/${convert.group.dao_id}`}>Open DAO setup</Link>
+            <CardContent className="space-y-3 p-4 pt-1 text-xs">
+              <div>
+                <p className="text-muted-foreground">DAO 地址</p>
+                <p className="mt-0.5 break-all font-mono">{convert.group.dao_id}</p>
+              </div>
+              <Button asChild size="sm" className="w-full">
+                <Link
+                  href={`/dao/${convert.group.dao_id}/treasury?from=convert&groupId=${groupIdText}`}
+                >
+                  查看金库
+                  <ChevronRight className="ml-1 h-4 w-4" />
+                </Link>
               </Button>
             </CardContent>
           </Card>
         ) : convert.pending ? (
           <Card className="mb-4 border-amber-300 bg-amber-50 shadow-none">
             <CardContent className="p-4 text-xs">
-              <p className="font-medium">Conversion pending</p>
+              <p className="font-medium">升级确认中</p>
               <p className="mt-1 text-muted-foreground">
-                Wait for the factory callback. dao_id is written only if the
-                factory returns true.
+                等链上写入 DAO 地址后，页面才会跳转。不会用交易哈希猜一个 DAO。
               </p>
               <Button
                 size="sm"
@@ -108,7 +125,7 @@ export function ConvertForm({
                 className="mt-3"
                 onClick={() => void convert.refresh()}
               >
-                Refresh final state
+                刷新链上状态
               </Button>
             </CardContent>
           </Card>
@@ -117,11 +134,11 @@ export function ConvertForm({
         {!convert.group?.dao_id ? (
           <Card className="shadow-none">
             <CardHeader>
-              <CardTitle className="text-base">Owner inputs</CardTitle>
+              <CardTitle className="text-base">确认升级</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="space-y-1.5">
-                <Label htmlFor="dao-name">DAO name</Label>
+                <Label htmlFor="dao-name">DAO 名称</Label>
                 <Input
                   id="dao-name"
                   value={daoName}
@@ -129,12 +146,11 @@ export function ConvertForm({
                   placeholder="builders"
                 />
                 <p className="text-[11px] text-muted-foreground">
-                  The factory appends its own suffix; enter only the unqualified
-                  prefix.
+                  只填写前缀，系统会追加测试网后缀。
                 </p>
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="purpose">Purpose</Label>
+                <Label htmlFor="purpose">用途说明</Label>
                 <Textarea
                   id="purpose"
                   value={purpose}
@@ -155,22 +171,22 @@ export function ConvertForm({
                       className="h-10 min-h-10 w-full rounded-xl"
                       onClick={() => void convert.refresh()}
                     >
-                      Retry load
+                      重试读取
                     </Button>
                   ) : null}
                 </div>
               ) : null}
               {localError || convert.error ? (
-                <p className="text-xs text-destructive">
+                <p className="break-words text-xs text-destructive">
                   {localError ?? convert.error}
                 </p>
               ) : null}
               <Button
                 className="h-12 min-h-12 w-full rounded-xl text-base"
-                disabled={!convert.canConvert || convert.submitting}
+                disabled={!convert.canConvert || convert.submitting || convert.pending}
                 onClick={submit}
               >
-                {convert.submitting ? "Waiting for wallet…" : "Convert with wallet"}
+                {convert.submitting ? "等待钱包签名…" : "确认升级"}
               </Button>
             </CardContent>
           </Card>
