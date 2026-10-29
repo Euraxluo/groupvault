@@ -6,6 +6,9 @@ import type { Page } from "@playwright/test"
 
 export const WALLET_APPROVAL_TIMEOUT_MS = 180_000
 
+/** Navbar wallet chip: English in older builds, Chinese since Jobs IA. */
+const CONNECT_CHIP = /connect|连接/i
+
 export interface DemoCredential {
   accountId: string
   privateKey: string
@@ -156,24 +159,48 @@ export async function waitForWalletApproval(page: Page, label: string): Promise<
 
 /** Match navbar account chip: full id or shortAccount (8…6). */
 async function isAccountChipVisible(page: Page, accountId?: string): Promise<boolean> {
+  // The navbar hydrates the wallet session asynchronously; check for a short
+  // window instead of sampling once and racing the first render.
+  const deadline = Date.now() + 15_000
   if (accountId) {
     const short =
       accountId.length <= 18
         ? accountId
         : `${accountId.slice(0, 8)}…${accountId.slice(-6)}`
-    if (await page.getByRole("button", { name: short, exact: true }).first().isVisible().catch(() => false)) {
-      return true
+    while (Date.now() < deadline) {
+      if (
+        await page
+          .getByRole("button", { name: short, exact: true })
+          .first()
+          .isVisible()
+          .catch(() => false)
+      ) {
+        return true
+      }
+      if (
+        await page
+          .getByRole("button", { name: accountId, exact: true })
+          .first()
+          .isVisible()
+          .catch(() => false)
+      ) {
+        return true
+      }
+      await page.waitForTimeout(250)
     }
-    if (await page.getByRole("button", { name: accountId, exact: true }).first().isVisible().catch(() => false)) {
-      return true
-    }
+    return false
   }
   // Fallback: full suffix still present, or truncated “…estnet” / “…e.near”
-  return page
-    .getByRole("button", { name: /\.testnet|\.near|…[a-z0-9_-]{3,}/i })
-    .first()
-    .isVisible()
-    .catch(() => false)
+  while (Date.now() < deadline) {
+    const visible = await page
+      .getByRole("button", { name: /\.testnet|\.near|…[a-z0-9_-]{3,}/i })
+      .first()
+      .isVisible()
+      .catch(() => false)
+    if (visible) return true
+    await page.waitForTimeout(250)
+  }
+  return false
 }
 
 export async function connectDemoKeypair(
@@ -193,7 +220,19 @@ export async function connectDemoKeypair(
     return
   }
 
-  await page.getByRole("button", { name: /connect/i }).first().click()
+  await page.getByRole("button", { name: CONNECT_CHIP }).first().click()
+  // The injected session may already hydrate the dialog; then it only shows
+  // Disconnect and there is nothing left to submit.
+  if (
+    await page
+      .getByRole("button", { name: /Disconnect|断开钱包/i })
+      .first()
+      .isVisible()
+      .catch(() => false)
+  ) {
+    await page.keyboard.press("Escape").catch(() => {})
+    return
+  }
   // Prefer UI path so sessionStorage is also set for the tab.
   const keypairButton = page.getByRole("button", { name: /Keypair \(demo\)/i })
   if (await keypairButton.isVisible().catch(() => false)) {
@@ -202,8 +241,10 @@ export async function connectDemoKeypair(
     await page.getByLabel("Private key").fill(credentials.privateKey)
     await page.getByRole("button", { name: /Connect keypair/i }).click()
   } else {
-    // Injection already hydrated; Connect wallet resolves immediately.
-    await page.getByRole("button", { name: /Connect wallet/i }).click()
+    // Injection already hydrated; the connect action resolves immediately.
+    await page
+      .getByRole("button", { name: /Connect wallet|连接钱包/i })
+      .click()
   }
 
   const deadline = Date.now() + 30_000
@@ -224,8 +265,8 @@ export async function connectDemoKeypair(
 }
 
 export async function connectMyNearWallet(page: Page): Promise<void> {
-  await page.getByRole("button", { name: /connect/i }).first().click()
-  await page.getByRole("button", { name: /Connect wallet/i }).click()
+  await page.getByRole("button", { name: CONNECT_CHIP }).first().click()
+  await page.getByRole("button", { name: /Connect wallet|连接钱包/i }).click()
 
   const deadline = Date.now() + WALLET_APPROVAL_TIMEOUT_MS
   while (Date.now() < deadline) {

@@ -1,5 +1,13 @@
 import { defineConfig, devices } from "@playwright/test"
 
+/**
+ * The demo dev server (:3100) and indexer (:8787) are hub-managed in this
+ * environment: starting another one from Playwright killed earlier executor
+ * runs. Reuse the live pair by default; opt into owning fresh processes with
+ * E2E_OWN_SERVERS=1 on a machine where nothing is listening.
+ */
+const ownServers = process.env.E2E_OWN_SERVERS === "1"
+
 export default defineConfig({
   testDir: "./tests/e2e",
   fullyParallel: false,
@@ -30,7 +38,7 @@ export default defineConfig({
       // config must never be reused.
       command: "pnpm dev -- --hostname 127.0.0.1 --port 3100",
       url: "http://127.0.0.1:3100",
-      reuseExistingServer: false,
+      reuseExistingServer: !ownServers,
       timeout: 120_000,
     },
     {
@@ -39,7 +47,7 @@ export default defineConfig({
       // otherwise a stale file cursor would replay thousands of blocks.
       command: "pnpm indexer:dev",
       url: "http://127.0.0.1:8787/health",
-      reuseExistingServer: false,
+      reuseExistingServer: !ownServers,
       timeout: 120_000,
       env: {
         INDEXER_RPC_URL:

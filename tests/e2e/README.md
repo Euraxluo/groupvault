@@ -29,8 +29,8 @@ export DEMO_ACCOUNT_B=gv-b-1024-210252.testnet
 export DEMO_RECEIVER=gv-b-1024-210252.testnet
 export DEMO_KEYPAIR_MODE=1
 # Optional if credentials are not in ~/.near-credentials:
-# export DEMO_PRIVATE_KEY_A=ed25519:…
-# export DEMO_PRIVATE_KEY_B=ed25519:…
+# export DEMO_PRIVATE_KEY_A=<local keypair string>
+# export DEMO_PRIVATE_KEY_B=<local keypair string>
 export NEXT_PUBLIC_GROUPVAULT_CONTRACT=gv-deployer-1024-204559-groupvault.testnet
 export NEXT_PUBLIC_JOIN_FT=gv-deployer-1024-204559-ft.testnet
 export NEXT_PUBLIC_NEAR_NETWORK=testnet
@@ -69,3 +69,30 @@ The create step starts from a clean record (`resetEvidence`), so a previous
 run's `dao_id` or hashes can never be attributed to a new group. Each later step
 adds only the values it produced: `join_tx`, `message_receipt_ids`,
 `convert_tx`, then the chain-confirmed `dao_id`.
+
+## Jobs IA journey (J018/J019)
+
+`tests/e2e/jobs-ia.spec.ts` is the isolated Jobs IA run: A creates a fresh
+group → B pays from 发现 → A chats and the indexer renders it → A converts →
+DAO treasury glance → `回到聊天`.
+
+- Evidence: `JOBS_IA_EVIDENCE_PATH` (default `artifacts/jobs-ia-e2e.json`) plus
+  the independent final reads written to `artifacts/jobs-ia-e2e-result.json`.
+  It refuses to point at `artifacts/demo-input.json`, so the older demo record
+  can never be reused as this run's proof.
+- B always runs in a separate `browser.newContext()`, so A's keypair session is
+  never inherited by the paying account.
+- Servers: the demo app on `:3100` and the indexer on `:8787` are usually
+  hub-managed here, so the Playwright config reuses a live pair by default.
+  Set `E2E_OWN_SERVERS=1` only on a machine where nothing is listening and you
+  want the run to spawn fresh processes.
+- Usage:
+
+```bash
+cd /Users/echo/project/groupvault
+DEMO_PHASE=through-convert pnpm e2e:testnet --project=chromium \
+  tests/e2e/jobs-ia.spec.ts --list
+```
+
+Note the direct `--project=...` form: an extra `--` makes Playwright treat the
+following arguments as file filters and it will run every spec.

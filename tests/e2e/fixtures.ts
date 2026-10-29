@@ -17,8 +17,9 @@ export function recordSentTransactions(page: Page): SentTransaction[] {
   page.on("response", async (response) => {
     const request = response.request()
     if (request.method() !== "POST") return
-    if (!/jsonrpc|near/.test(request.url())) return
     const payload = request.postData()
+    // Match on the JSON-RPC body, not the host: failover providers use hosts
+    // like `testnet-rpc.intea.rs` that do not contain "near".
     if (!payload || !payload.includes("send_tx")) return
     try {
       const body = (await response.json()) as {
