@@ -1,0 +1,38 @@
+{
+  "network": "testnet",
+  "owner_account_id": "gv-a-1024-210252.testnet",
+  "member_account_id": "gv-b-1024-210252.testnet",
+  "group_id": 18,
+  "group_owner": "gv-a-1024-210252.testnet",
+  "join_fee": "1000000",
+  "join_ft_account_id": "gv-deployer-1024-204559-ft.testnet",
+  "create_tx": "9g6WJNLKkxhKackQASDaJTA2mfJ2NioPmy2Rr72sAVcw",
+  "recorded_at": "2026-10-29T04:16:00.814Z",
+  "join_tx": "4MqV6KubcdK5btzhbdNeCyTRK5gbWABPmVuAwjjuPGsm",
+  "message_text": "Jobs IA public chat 1793247095372",
+  "message_receipt_ids": [
+    "8TWuh7Ewt963V7Mmxwfj7HRZTtTc49QcSWhLJwYhpj39"
+  ],
+  "chat_tx": "BkddKpiQvKm6G1uh7SmZagoPnzBdSeynep3kVZGHTXRy",
+  "message_on_chain": true,
+  "indexed_message": false,
+  "independent_reads": {
+    "indexer_health": {
+      "ready": true,
+      "last_finalized_block": 275248338,
+      "last_processed_block": 274620987,
+      "cursor_age_ms": 267396505,
+      "error": "RPC block failed with HTTP 422"
+    },
+    "message_receipt_count": 1,
+    "group_owner": "gv-a-1024-210252.testnet",
+    "member_is_member": true,
+    "dao_policy_roles": 2,
+    "treasury_native_balance": "6000000000000000000000000"
+  },
+  "convert_tx": "6s9jBh8qbHUJTU5SfqBBLtpadcw5uNz4koGeMhakdZEo",
+  "dao_id": "groupvault-18.sputnikv2.testnet",
+  "treasury_native_balance": "6000000000000000000000000",
+  "back_to_chat": true,
+  "back_url": "http://127.0.0.1:3100/groups/18/chat"
+}
