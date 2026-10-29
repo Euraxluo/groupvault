@@ -19,6 +19,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { useCreateGroup } from "@/hooks/use-group-vault"
 import { getNearConfig } from "@/lib/near/config"
 import { CREATE_GROUP_DEPOSIT } from "@/lib/near/deposits"
+import { parseFtToBaseUnits } from "@/lib/near/format"
 
 export interface CreateGroupDialogProps {
   open: boolean
@@ -31,22 +32,25 @@ export function CreateGroupDialog({ open, onOpenChange }: CreateGroupDialogProps
   const { create, submitting, error } = useCreateGroup()
   const [name, setName] = useState("")
   const [description, setDescription] = useState("")
-  const [joinFee, setJoinFee] = useState("1000000")
+  const [joinFee, setJoinFee] = useState("1")
   const [members, setMembers] = useState("")
   const [localError, setLocalError] = useState<string | null>(null)
 
   const submit = async () => {
     setLocalError(null)
     if (!name.trim()) {
-      setLocalError("Group name is required")
+      setLocalError("请填写群名")
       return
     }
-    if (!/^\d+$/.test(joinFee)) {
-      setLocalError("Join fee must be whole base units")
+    let joinFeeBaseUnits: string
+    try {
+      joinFeeBaseUnits = parseFtToBaseUnits(joinFee, 6)
+    } catch {
+      setLocalError("入群费格式不对：最多 6 位小数，不能为负")
       return
     }
     if (!config.joinFtContractId) {
-      setLocalError("Join FT is not configured yet")
+      setLocalError("入群币合约尚未配置")
       return
     }
     const initialMembers = members
@@ -59,16 +63,18 @@ export function CreateGroupDialog({ open, onOpenChange }: CreateGroupDialogProps
         {
           name: name.trim(),
           description: description.trim(),
-          joinFee,
+          joinFee: joinFeeBaseUnits,
           joinFt: config.joinFtContractId,
           initialMembers,
         },
         CREATE_GROUP_DEPOSIT,
       )
+      if (receipt.groupId === null) {
+        setLocalError("群已创建，但链上暂时读不到群号。请稍后刷新重试。")
+        return
+      }
       onOpenChange(false)
-      router.push(
-        receipt.groupId === null ? "/groups" : `/groups/${receipt.groupId}`,
-      )
+      router.push(`/groups/${receipt.groupId}/chat`)
     } catch (reason) {
       // Hook may not have set error if the throw happened before its try.
       setLocalError(reason instanceof Error ? reason.message : String(reason))
@@ -79,46 +85,45 @@ export function CreateGroupDialog({ open, onOpenChange }: CreateGroupDialogProps
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Create a paid group</DialogTitle>
+          <DialogTitle>新建付费群</DialogTitle>
           <DialogDescription>
-            The wallet signs one create_group call. Convert later is a separate
-            owner action.
+            钱包签一次名即可建群。升级为 DAO 是之后群主单独发起的操作。
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-3">
           <div className="space-y-1.5">
-            <Label htmlFor="group-name">Name</Label>
+            <Label htmlFor="group-name">群名</Label>
             <Input
               id="group-name"
               value={name}
               onChange={(event) => setName(event.target.value)}
-              placeholder="Builders"
+              placeholder="比如：产品讨论群"
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="group-description">Description</Label>
+            <Label htmlFor="group-description">群简介</Label>
             <Textarea
               id="group-description"
               value={description}
               onChange={(event) => setDescription(event.target.value)}
-              placeholder="What is this paid group for?"
+              placeholder="这个群聊什么？"
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="join-fee">Join fee (FT base units)</Label>
+            <Label htmlFor="join-fee">入群费（入群币）</Label>
             <Input
               id="join-fee"
-              inputMode="numeric"
+              inputMode="decimal"
               value={joinFee}
               onChange={(event) => setJoinFee(event.target.value)}
             />
             <p className="text-[11px] text-muted-foreground">
-              Paid membership does not create voting weight.
+              使用 6 位小数的入群币计价，例如 1 或 0.25。付费进群不产生投票权重。
             </p>
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="initial-members">Initial account IDs (optional)</Label>
+            <Label htmlFor="initial-members">初始成员账户（可选）</Label>
             <Textarea
               id="initial-members"
               value={members}
@@ -136,11 +141,11 @@ export function CreateGroupDialog({ open, onOpenChange }: CreateGroupDialogProps
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
+            取消
           </Button>
           <Button onClick={submit} disabled={submitting}>
             <Plus className="mr-2 h-4 w-4" />
-            {submitting ? "Waiting for wallet…" : "Create group"}
+            {submitting ? "等待钱包…" : "创建"}
           </Button>
         </DialogFooter>
       </DialogContent>

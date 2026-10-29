@@ -106,6 +106,7 @@ export function useCreateGroup() {
 
         // Prefer the contract return value. If the wallet does not expose it,
         // confirm the new group from bounded chain state instead of assuming 0.
+        // A missing ID stays an error: never redirect to a guessed group.
         let groupId: number | null = null
         if (
           typeof receipt.successValue === "number" &&
@@ -113,13 +114,26 @@ export function useCreateGroup() {
         ) {
           groupId = receipt.successValue
         } else {
+          let readError: unknown
           for (let attempt = 0; attempt < 8 && groupId === null; attempt += 1) {
-            const groups = await client.getGroups(0, 50)
-            const owned = groups
-              .filter((group) => group.owner === accountId)
-              .sort((left, right) => right.id - left.id)
-            if (owned[0]) groupId = owned[0].id
-            else await new Promise((resolve) => setTimeout(resolve, 1500))
+            try {
+              const groups = await client.getGroups(0, 50)
+              const owned = groups
+                .filter((group) => group.owner === accountId)
+                .sort((left, right) => right.id - left.id)
+              if (owned[0]) groupId = owned[0].id
+              else await new Promise((resolve) => setTimeout(resolve, 1500))
+            } catch (reason) {
+              readError = reason
+              await new Promise((resolve) => setTimeout(resolve, 1500))
+            }
+          }
+          if (groupId === null && readError) {
+            throw new Error(
+              `群已提交，但链上群号读取失败：${
+                readError instanceof Error ? readError.message : String(readError)
+              }`,
+            )
           }
         }
 

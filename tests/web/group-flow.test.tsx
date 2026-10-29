@@ -85,11 +85,11 @@ describe("create group flow", () => {
     })
     render(<CreateGroupDialog open onOpenChange={() => {}} />)
 
-    fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Builders" } })
-    fireEvent.change(screen.getByLabelText("Join fee (FT base units)"), {
-      target: { value: "1000000" },
+    fireEvent.change(screen.getByLabelText("群名"), { target: { value: "Builders" } })
+    fireEvent.change(screen.getByLabelText("入群费（入群币）"), {
+      target: { value: "1" },
     })
-    fireEvent.click(screen.getByRole("button", { name: /Create group/i }))
+    fireEvent.click(screen.getByRole("button", { name: /^创建$/ }))
 
     await waitFor(() => expect(create).toHaveBeenCalledTimes(1))
     expect(create).toHaveBeenCalledWith(
@@ -102,13 +102,36 @@ describe("create group flow", () => {
       },
       "500000000000000000000000",
     )
-    await waitFor(() => expect(push).toHaveBeenCalledWith("/groups/7"))
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/groups/7/chat"))
+  })
+
+  it("submits fractional human input as exact base units", async () => {
+    create.mockResolvedValue({
+      transactionHash: "tx-create",
+      receiptIds: ["r"],
+      groupId: 7,
+    })
+    render(<CreateGroupDialog open onOpenChange={() => {}} />)
+
+    fireEvent.change(screen.getByLabelText("群名"), { target: { value: "Builders" } })
+    fireEvent.change(screen.getByLabelText("入群费（入群币）"), {
+      target: { value: "1.25" },
+    })
+    fireEvent.click(screen.getByRole("button", { name: /^创建$/ }))
+
+    await waitFor(() => expect(create).toHaveBeenCalledTimes(1))
+    expect(create.mock.calls[0][0]).toMatchObject({ joinFee: "1250000" })
+  })
+
+  it("defaults the human join fee to 1", () => {
+    render(<CreateGroupDialog open onOpenChange={() => {}} />)
+    expect(screen.getByLabelText("入群费（入群币）")).toHaveValue("1")
   })
 
   it("blocks an empty group name before opening the wallet", async () => {
     render(<CreateGroupDialog open onOpenChange={() => {}} />)
-    fireEvent.click(screen.getByRole("button", { name: /Create group/i }))
-    expect(await screen.findByText(/Group name is required/i)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole("button", { name: /^创建$/ }))
+    expect(await screen.findByText("请填写群名")).toBeInTheDocument()
     expect(create).not.toHaveBeenCalled()
   })
 
@@ -116,9 +139,25 @@ describe("create group flow", () => {
     create.mockRejectedValue(new Error("User rejected"))
     hookState = { error: "User rejected" }
     render(<CreateGroupDialog open onOpenChange={() => {}} />)
-    fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Builders" } })
-    fireEvent.click(screen.getByRole("button", { name: /Create group/i }))
+    fireEvent.change(screen.getByLabelText("群名"), { target: { value: "Builders" } })
+    fireEvent.click(screen.getByRole("button", { name: /^创建$/ }))
     await waitFor(() => expect(create).toHaveBeenCalled())
+    expect(push).not.toHaveBeenCalled()
+  })
+
+  it("never redirects when the chain read returns no group id", async () => {
+    create.mockResolvedValue({
+      transactionHash: "tx-create",
+      receiptIds: ["r"],
+      groupId: null,
+    })
+    render(<CreateGroupDialog open onOpenChange={() => {}} />)
+    fireEvent.change(screen.getByLabelText("群名"), { target: { value: "Builders" } })
+    fireEvent.click(screen.getByRole("button", { name: /^创建$/ }))
+
+    expect(
+      await screen.findByText(/群已创建，但链上暂时读不到群号/),
+    ).toBeInTheDocument()
     expect(push).not.toHaveBeenCalled()
   })
 })
