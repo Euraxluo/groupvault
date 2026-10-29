@@ -34,7 +34,10 @@ test("messages shows bounded real groups with human join fees", async ({ page })
 
   await expect(page.getByRole("heading", { level: 1, name: "消息" })).toBeVisible()
   await expect(page.getByText(/付费进群聊天，成熟了就一键变成 DAO/).first()).toBeVisible()
-  await expect(page.getByText(/当前合约最近 \d+ 个群/)).toBeVisible()
+  // The bounded list is a live contract read; public RPC can take several seconds.
+  await expect(page.getByText(/当前合约最近 \d+ 个群/)).toBeVisible({
+    timeout: 30_000,
+  })
   await expect(page.getByText(/尚未按成员关系过滤/)).toBeVisible()
   const group16 = page.locator('a[href="/groups/16/chat"]')
   await expect(group16).toBeVisible()

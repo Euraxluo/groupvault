@@ -76,6 +76,16 @@ describe("public chat", () => {
     expect(screen.queryByPlaceholderText(/写一条公开消息/)).not.toBeInTheDocument()
   })
 
+  it("does not tell a member to pay while membership is still loading", () => {
+    groupState = { ...groupState, loading: true, members: [] }
+    render(<GroupChat groupId={3} />)
+
+    expect(screen.getByText("正在确认你的成员身份…")).toBeInTheDocument()
+    expect(screen.queryByText("付费进群后才能发言")).not.toBeInTheDocument()
+    expect(screen.queryByRole("link", { name: "付费进群" })).not.toBeInTheDocument()
+    expect(screen.queryByPlaceholderText(/写一条公开消息/)).not.toBeInTheDocument()
+  })
+
   it("enforces the 4096-byte UTF-8 limit before the wallet", () => {
     render(<GroupChat groupId={3} />)
     const box = screen.getByPlaceholderText(/写一条公开消息/)

@@ -1,137 +1,7 @@
 {
-  "at": "2026-10-26T05:14:03.590Z",
+  "at": "2026-10-29T04:23:36.650Z",
   "startFrame": 153,
   "frames": [
-    {
-      "name": "74-A-home",
-      "caption": "A connected home",
-      "ok": true
-    },
-    {
-      "name": "75-A-create-form",
-      "caption": "A create group form",
-      "ok": true
-    },
-    {
-      "name": "76-A-overview",
-      "caption": "A group 16 overview",
-      "ok": true
-    },
-    {
-      "name": "77-A-chat",
-      "caption": "A chat before send",
-      "ok": true
-    },
-    {
-      "name": "78-A-chat-no-composer",
-      "caption": "A no composer",
-      "ok": true
-    },
-    {
-      "name": "79-B-home",
-      "caption": "B connected home",
-      "ok": true
-    },
-    {
-      "name": "80-B-join",
-      "caption": "B join wall 16",
-      "ok": true
-    },
-    {
-      "name": "81-B-join-result",
-      "caption": "B after join click",
-      "ok": true
-    },
-    {
-      "name": "82-B-chat",
-      "caption": "B chat",
-      "ok": true
-    },
-    {
-      "name": "83-B-chat-no-composer",
-      "caption": "B no composer",
-      "ok": true
-    },
-    {
-      "name": "84-C-home",
-      "caption": "C connected home",
-      "ok": true
-    },
-    {
-      "name": "85-C-join",
-      "caption": "C join wall 16",
-      "ok": true
-    },
-    {
-      "name": "86-C-join-result",
-      "caption": "C after join click",
-      "ok": true
-    },
-    {
-      "name": "87-C-chat",
-      "caption": "C chat",
-      "ok": true
-    },
-    {
-      "name": "88-C-chat-no-composer",
-      "caption": "C no composer",
-      "ok": true
-    },
-    {
-      "name": "89-A-convert",
-      "caption": "A convert form",
-      "ok": true
-    },
-    {
-      "name": "90-A-convert-waiting",
-      "caption": "A after convert click",
-      "ok": true
-    },
-    {
-      "name": "91-A-convert-result",
-      "caption": "A convert final UI",
-      "ok": true
-    },
-    {
-      "name": "92-A-chat-ready",
-      "caption": "A chat after wait ready=false",
-      "ok": true
-    },
-    {
-      "name": "93-A-chat-sent",
-      "caption": "A after send",
-      "ok": true
-    },
-    {
-      "name": "94-B-chat-ready",
-      "caption": "B chat after wait ready=false",
-      "ok": true
-    },
-    {
-      "name": "95-B-chat-sent",
-      "caption": "B after send",
-      "ok": true
-    },
-    {
-      "name": "96-C-chat-ready",
-      "caption": "C chat after wait ready=false",
-      "ok": true
-    },
-    {
-      "name": "97-C-chat-sent",
-      "caption": "C after send",
-      "ok": true
-    },
-    {
-      "name": "98-A-convert-10n",
-      "caption": "A convert form (expect 10N deposit)",
-      "ok": true
-    },
-    {
-      "name": "99-A-convert-submitted",
-      "caption": "A after convert submit",
-      "ok": true
-    },
     {
       "name": "100-A-convert-final",
       "caption": "A convert final",
@@ -414,6 +284,62 @@
       "file": "155-A-roster-full-tip.png",
       "caption": "A full roster Tip count=2",
       "at": "2026-10-27T07:25:36.055Z"
+    },
+    {
+      "n": 156,
+      "file": "156-messages.png",
+      "caption": "消息 · bounded real groups, human 入群币",
+      "at": "2026-10-29T04:18:51.165Z",
+      "width": 780,
+      "height": 1688
+    },
+    {
+      "n": 157,
+      "file": "157-discover.png",
+      "caption": "发现 · paid Join entry, human 入群币",
+      "at": "2026-10-29T04:18:53.501Z",
+      "width": 780,
+      "height": 1688
+    },
+    {
+      "n": 158,
+      "file": "158-g16-chat.png",
+      "caption": "群 16 聊天 · 群名/DAO 徽标/群入口",
+      "at": "2026-10-29T04:18:55.950Z",
+      "width": 780,
+      "height": 1688
+    },
+    {
+      "n": 159,
+      "file": "159-g16-sheet.png",
+      "caption": "群概况 · 成员/入群费/DAO/Tip（未发送交易）",
+      "at": "2026-10-29T04:20:33.435Z",
+      "width": 780,
+      "height": 1688
+    },
+    {
+      "n": 160,
+      "file": "160-convert-confirm.png",
+      "caption": "升级为 DAO · group 17 · 约 10 NEAR（未点击）",
+      "at": "2026-10-29T04:21:28.874Z",
+      "width": 780,
+      "height": 1688
+    },
+    {
+      "n": 161,
+      "file": "161-treasury-glance.png",
+      "caption": "金库一眼 · PASS · 6.3501 NEAR",
+      "at": "2026-10-29T04:21:44.301Z",
+      "width": 780,
+      "height": 1688
+    },
+    {
+      "n": 162,
+      "file": "162-back-to-chat.png",
+      "caption": "回到聊天 · /groups/16/chat",
+      "at": "2026-10-29T04:23:36.650Z",
+      "width": 780,
+      "height": 1688
     }
   ],
   "steps": {
@@ -603,6 +529,27 @@
     "tipRosterFull": {
       "pass": true,
       "count": 2
+    },
+    "jobsIaTipRegression": {
+      "selfDisabled": true,
+      "selfLabel": "自己",
+      "otherTips": 2,
+      "transactionSent": false
+    },
+    "jobsIaConvertFixture": {
+      "groupId": 17,
+      "owner": "gv-a-1024-210252.testnet",
+      "daoId": null,
+      "pending": false,
+      "transactionSent": false,
+      "confirmEnabled": true
+    },
+    "jobsIaTreasury": {
+      "status": "PASS",
+      "balanceText": "6.3501 NEAR",
+      "backHref": "/groups/16/chat",
+      "transactionSent": false,
+      "backUrl": "http://127.0.0.1:3100/groups/16/chat"
     }
   },
   "groupId": 16,
@@ -610,7 +557,7 @@
   "groupName": "Mobile3 sxqh5",
   "aNearBefore": 12.997649540738218,
   "aNearAfter": 2.979469234053469,
-  "nextFrame": 156,
+  "nextFrame": 163,
   "resumeAt": "2026-10-26T05:19:33.211Z",
   "resumeFrom": 92,
   "govAt": "2026-10-26T05:27:01.267Z",
@@ -682,6 +629,18 @@
   "twFinishAt": "2026-10-26T06:23:11.797Z",
   "wrapAt": "2026-10-26T06:42:15.399Z",
   "mobile01CanClose": true,
-  "mobile01Notes": "Acceptance met: Tip UI PASS (\u6253\u8d4f visible+tappable on Details; tx shown; B +0.01N). Prior wrap130 frames 130\u2013152; Transfer#5 Approved; tipAB on-chain; chatWrap PASS.",
-  "tipUiAt": "2026-10-27T07:25:07.293Z"
+  "mobile01Notes": "Acceptance met: Tip UI PASS (打赏 visible+tappable on Details; tx shown; B +0.01N). Prior wrap130 frames 130–152; Transfer#5 Approved; tipAB on-chain; chatWrap PASS.",
+  "tipUiAt": "2026-10-27T07:25:07.293Z",
+  "jobsIaAt": "2026-10-29T04:23:36.650Z",
+  "jobsIaProtectedHashes": {
+    "153-A-g16-details-tip-visible.png": "52ce565964a3e02e68f375c0a6cc31a9ee2d689c9fef90850c0ce44cf817baad",
+    "154-A-tip-after-click.png": "00397b9b2877e662651897c08c2126e2abaaad122f6538f5b241c5806cca38a5",
+    "155-A-roster-full-tip.png": "a8023e0ac4cd2f770042f736d2d86e600a456b5816247616f62fb174e50a24e9"
+  },
+  "jobsIaLastRun": {
+    "startFrame": 162,
+    "stopFrame": 162,
+    "convertFixture": null,
+    "transactionSent": false
+  }
 }

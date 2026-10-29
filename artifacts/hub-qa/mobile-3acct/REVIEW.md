@@ -97,3 +97,34 @@ Viewport: **390×844** · `fullPage: false` · Asia/Shanghai **2026-10-26 ~13:23
 - CONVERT_DEPOSIT live 10N
 - Jobs IA bottom-nav **not** restored
 - No original multisig / DeepSeek / force-push
+
+## Continuation 2026-10-29 12:25 CST — Jobs Mobile IA (frames 156–162)
+
+Viewport 390×844 / DPR2 · live `:3100` · hub-managed dev server (never restarted by the driver).
+
+| Frame | Verdict | Notes |
+| --- | --- | --- |
+| 156 消息 | **PASS** | 19 bounded real groups, honest "尚未按成员关系过滤", `入群费 1 入群币`, zero raw base units/yocto |
+| 157 发现 | **PASS** | group-16 row links to `/groups/16/join` (paid wall), no `/chat` shortcut |
+| 158 群 16 聊天 | **PASS** | 群名 + DAO 徽标 + `群`; compact Chinese privacy copy |
+| 159 群概况 | **PASS** | 3 members, `1 入群币`, 已是 DAO; self `自己` disabled, B/C `打赏`; **no Tip tx** |
+| 160 升级确认 | **PASS** | genuine A-owned unconverted fixture **group 17**; `约 10 NEAR`; enabled 确认升级; **not clicked** (`convert_tx` absent) |
+| 161 金库一眼 | **PASS** | chain balance `6.3501 NEAR` (read via `NearRpc.accountBalance`), sole primary `回到聊天` |
+| 162 回到聊天 | **PASS** | final URL `…/groups/16/chat`, composer available (membership confirmed) |
+
+### Preservation
+- 153–155 SHA-256 recorded before capture and unchanged (`git diff --exit-code` clean).
+- `lib/near/rpc.ts` failover + `网络繁忙` kept; `CONVERT_DEPOSIT` 10N unchanged.
+- Secondary capability trace re-checked this round: sheet → `/dao/:id` → treasury / proposals / staking setup / stake; Join, Roster, QR all reachable; `/inbox` is a redirect, not a capability entry.
+
+### Honest gaps
+- `:8787` indexer remains frozen (`last_processed_block 274620987`, `RPC block failed with HTTP 422`), so chat frames show the real "索引器同步中" state and `jobs-ia-e2e-result.json` stays **partial** even though the message is proven in chain logs.
+- J019's fresh journey (group 18) is chain-verified; its `indexed_message` gap is the same indexer issue, not a UI defect.
+
+### Defects found and fixed during this round
+| Symptom | Fix |
+| --- | --- |
+| Chat told a **member** "付费进群后才能发言" while membership was still loading | `GroupChat` renders `正在确认你的成员身份…` until the member list arrives (`loading && members.length===0`) |
+| Proposals page parsed empty `?ids=` as proposal **0** | drop empty tokens before numeric parsing |
+| Proposal list discarded all reads when one of ten `get_proposal` calls 429'd | bounded 3-wide read, newest-first, partial results + explicit `N 个提案读取失败` |
+| Sheet/Treasury frames captured mid-animation | driver waits for dialog geometry / text to settle |

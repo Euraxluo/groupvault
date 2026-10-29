@@ -28,6 +28,7 @@ const evidencePath = path.join(out, "_last-chain.json")
 const BASE_URL = process.env.BASE_URL ?? "http://127.0.0.1:3100"
 const START_FRAME = Number(process.env.START_FRAME ?? "156")
 const STOP_FRAME = Number(process.env.STOP_FRAME ?? "162")
+const RECAPTURE_LAST = process.env.QA_RECAPTURE_LAST === "1"
 const QA_CONVERT_GROUP_ID = process.env.QA_CONVERT_GROUP_ID
   ? Number(process.env.QA_CONVERT_GROUP_ID)
   : null
@@ -227,6 +228,34 @@ function validateEvidenceWindow(chain) {
   }
 }
 
+/**
+ * Deliberate, single-frame redo of the most recent capture (e.g. a shot taken
+ * mid-animation). Never touches older frames: the target must be exactly
+ * `nextFrame - 1`, and its row/file are removed together.
+ */
+function dropLastFrame(chain) {
+  const expected = chain.nextFrame - 1
+  if (START_FRAME !== expected || STOP_FRAME !== expected) {
+    fail(
+      `QA_RECAPTURE_LAST only redoes the last frame (${expected}); got ${START_FRAME}-${STOP_FRAME}`,
+    )
+  }
+  const number = (frame) =>
+    typeof frame.n === "number"
+      ? frame.n
+      : Number(String(frame.name ?? frame.file ?? "").slice(0, 3))
+  const row = chain.frames.findIndex((frame) => number(frame) === expected)
+  if (row < 0) fail(`no evidence row for frame ${expected} to recapture`)
+  const entry = chain.frames[row]
+  const file = entry.file ?? path.basename(String(entry.name))
+  const target = path.join(out, file)
+  if (fs.existsSync(target)) fs.unlinkSync(target)
+  chain.frames.splice(row, 1)
+  chain.nextFrame = expected
+  note(`recapture: dropped frame ${expected} (${file}) before re-shooting it`)
+  return expected
+}
+
 async function hashes() {
   const result = {}
   for (const name of PROTECTED_FRAMES) {
@@ -253,6 +282,48 @@ async function assertServer() {
   note(`server ${BASE_URL} answered ${response.status}`)
 }
 
+/**
+ * Radix sheets slide in over ~300ms; a screenshot taken while the dialog is
+ * still translating captures a collapsed sheet. Wait until its geometry stops
+ * changing before capturing.
+ */
+async function waitForDialogSettled(page, dialog) {
+  let last = null
+  let stable = 0
+  const deadline = Date.now() + 10_000
+  while (Date.now() < deadline) {
+    const box = await dialog.boundingBox().catch(() => null)
+    if (box) {
+      const same =
+        last !== null &&
+        Math.abs(box.y - last.y) < 1 &&
+        Math.abs(box.height - last.height) < 1
+      stable = same ? stable + 1 : 0
+      last = box
+      if (stable >= 3) {
+        note(`dialog settled at y=${Math.round(box.y)} h=${Math.round(box.height)}`)
+        return box
+      }
+    }
+    await page.waitForTimeout(120)
+  }
+  fail("sheet did not finish animating within 10s")
+}
+
+/** Wait until the visible body text stops changing (fills-in/late RPC reads). */
+async function waitForStableText(page) {
+  let previous = null
+  let stable = 0
+  const deadline = Date.now() + 10_000
+  while (Date.now() < deadline) {
+    const text = (await page.textContent("body")) ?? ""
+    stable = text === previous ? stable + 1 : 0
+    previous = text
+    if (stable >= 3) return
+    await page.waitForTimeout(200)
+  }
+}
+
 async function main() {
   if (!Number.isSafeInteger(START_FRAME) || !Number.isSafeInteger(STOP_FRAME)) {
     fail("START_FRAME/STOP_FRAME must be integers")
@@ -265,6 +336,7 @@ async function main() {
   }
 
   const chain = readChain()
+  if (RECAPTURE_LAST) dropLastFrame(chain)
   validateEvidenceWindow(chain)
   const protectedHashes = await hashes()
   note(
@@ -374,12 +446,26 @@ async function main() {
     }
 
     if (START_FRAME <= 159 && STOP_FRAME >= 159) {
+      // A 159-only segment (recapture) did not run the 158 navigation above.
+      if (START_FRAME === 159) {
+        await page.goto(`${BASE_URL}/groups/${GROUP_ID}/chat`, {
+          waitUntil: "domcontentloaded",
+        })
+        await page
+          .getByRole("heading", { level: 1, name: /Mobile3 sxqh5/ })
+          .waitFor({ timeout: 60_000 })
+      }
       await page.getByRole("button", { name: "群" }).click()
       const sheet = page.getByRole("dialog")
       await sheet.waitFor()
       await sheet.getByText("已是 DAO").waitFor()
       await sheet.getByText("1 入群币", { exact: true }).waitFor()
       await sheet.getByRole("link", { name: /金库与投票/ }).waitFor()
+      await sheet.locator("[data-inline-roster]").waitFor()
+      const box = await waitForDialogSettled(page, sheet)
+      if (!box || box.height < 400) {
+        fail(`sheet content collapsed: height=${box?.height ?? 0}`)
+      }
 
       const self = sheet.locator(`[data-tip-receiver="${ACCOUNT_A}"]`)
       await self.waitFor()
@@ -414,6 +500,34 @@ async function main() {
       await page.getByText(/约 10 NEAR/).waitFor()
       const confirm = page.getByRole("button", { name: "确认升级" })
       await confirm.waitFor()
+
+      // The group read can land a few seconds after the form paints (public RPC
+      // throttle). A frame captured in that gap would show the placeholder
+      // "Group is not loaded" instead of the real owner confirmation.
+      const deadline = Date.now() + 90_000
+      let loaded = false
+      while (Date.now() < deadline) {
+        const body = (await page.textContent("body")) ?? ""
+        if (/Group is not loaded|正在读取/.test(body)) {
+          const retry = page.getByRole("button", { name: /重试读取/ })
+          if (await retry.isVisible().catch(() => false)) {
+            await retry.click().catch(() => {})
+          }
+          await page.waitForTimeout(2000)
+          continue
+        }
+        if (/Only the group owner|already a DAO|Connect the owner wallet/.test(body)) {
+          fail(`convert fixture is not a convertible owner state: ${body.match(/Only the group owner|already a DAO|Connect the owner wallet/)?.[0]}`)
+        }
+        if (await confirm.isEnabled().catch(() => false)) {
+          loaded = true
+          break
+        }
+        await page.waitForTimeout(1000)
+      }
+      if (!loaded) fail("convert confirmation never reached a loaded owner state")
+      await waitForStableText(page)
+
       const body = (await page.textContent("body")) ?? ""
       if (/10000000000000000000000000|yoctoNEAR/.test(body)) {
         fail("convert confirmation leaked raw yocto")
@@ -482,10 +596,13 @@ async function main() {
         backHref,
         transactionSent,
       }
-      await shot(
-        "treasury-glance",
-        `金库一眼 · ${treasuryStatus} · ${balanceText ?? "未读取"}`,
-      )
+      // A segment that starts at 162 (recapture) must not re-shoot 161.
+      if (START_FRAME <= 161) {
+        await shot(
+          "treasury-glance",
+          `金库一眼 · ${treasuryStatus} · ${balanceText ?? "未读取"}`,
+        )
+      }
 
       await back.click()
       await page.waitForURL(new RegExp(`/groups/${GROUP_ID}/chat$`), {
@@ -496,7 +613,13 @@ async function main() {
         fail(`final URL mismatch: ${backUrl}`)
       }
       steps.jobsIaTreasury.backUrl = backUrl
-      await shot("back-to-chat", "回到聊天 · /groups/16/chat")
+      if (START_FRAME <= 162) {
+        // Land on a settled chat, not the transient "正在读取群…" state.
+        await page
+          .getByRole("heading", { level: 1, name: /Mobile3 sxqh5/ })
+          .waitFor({ timeout: 60_000 })
+        await shot("back-to-chat", "回到聊天 · /groups/16/chat")
+      }
     }
 
     const nextChain = {

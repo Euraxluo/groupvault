@@ -37,6 +37,10 @@ export function GroupChat({
 
   const isMember = Boolean(wallet.accountId && members.includes(wallet.accountId))
   const bytes = utf8Bytes(text)
+  // Membership arrives with the group read. Until it does, do not tell a real
+  // member to pay again, and do not offer a composer we cannot back with chain
+  // state.
+  const membershipPending = loading && members.length === 0
 
   const submit = async () => {
     setLocalError(null)
@@ -165,6 +169,10 @@ export function GroupChat({
             连接钱包
           </Button>
         </div>
+      ) : membershipPending ? (
+        <p className="rounded-2xl border border-dashed p-4 text-sm text-muted-foreground">
+          正在确认你的成员身份…
+        </p>
       ) : isMember ? (
         <div className="space-y-2 rounded-2xl border border-border p-3">
           <Textarea
