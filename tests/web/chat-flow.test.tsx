@@ -60,39 +60,57 @@ beforeEach(() => {
 describe("public chat", () => {
   it("shows the public-log warning and indexer messages", () => {
     render(<GroupChat groupId={3} />)
-    expect(screen.getByText(/Public on-chain chat|public on-chain logs/i)).toBeInTheDocument()
+    expect(screen.getByText(/2 位成员/)).toBeInTheDocument()
+    expect(screen.getByText(/无端到端加密/)).toBeInTheDocument()
     expect(screen.getByText("hello from chain")).toBeInTheDocument()
   })
 
   it("blocks nonmembers from sending", () => {
     groupState = { ...groupState, members: ["alice.testnet"] }
     render(<GroupChat groupId={3} />)
-    expect(screen.getByText(/Join to send/i)).toBeInTheDocument()
-    expect(screen.getByRole("link", { name: /Pay and join/i })).toBeInTheDocument()
-    expect(screen.queryByPlaceholderText(/Write a public message/i)).not.toBeInTheDocument()
+    expect(screen.getByText("付费进群后才能发言")).toBeInTheDocument()
+    expect(screen.getByRole("link", { name: "付费进群" })).toHaveAttribute(
+      "href",
+      "/groups/3/join",
+    )
+    expect(screen.queryByPlaceholderText(/写一条公开消息/)).not.toBeInTheDocument()
   })
 
   it("enforces the 4096-byte UTF-8 limit before the wallet", () => {
     render(<GroupChat groupId={3} />)
-    const box = screen.getByPlaceholderText(/Write a public message/i)
+    const box = screen.getByPlaceholderText(/写一条公开消息/)
     fireEvent.change(box, { target: { value: "é".repeat(2049) } })
-    fireEvent.click(screen.getByRole("button", { name: /^Send$/i }))
+    fireEvent.click(screen.getByRole("button", { name: /^发送$/ }))
     expect(send).not.toHaveBeenCalled()
   })
 
   it("sends accepted text unchanged and waits for the receipt", async () => {
     send.mockResolvedValue(undefined)
     render(<GroupChat groupId={3} />)
-    fireEvent.change(screen.getByPlaceholderText(/Write a public message/i), {
+    fireEvent.change(screen.getByPlaceholderText(/写一条公开消息/), {
       target: { value: "  hello  " },
     })
-    fireEvent.click(screen.getByRole("button", { name: /^Send$/i }))
+    fireEvent.click(screen.getByRole("button", { name: /^发送$/ }))
     await waitFor(() => expect(send).toHaveBeenCalledWith("  hello  "))
   })
 
   it("shows indexing delay explicitly", () => {
     chatState = { ...chatState, indexing: true }
     render(<GroupChat groupId={3} />)
-    expect(screen.getByText(/Indexing…/i)).toBeInTheDocument()
+    expect(screen.getByText(/索引器同步中/)).toBeInTheDocument()
+  })
+
+  it("exposes the group sheet button without changing send behavior", () => {
+    const onOpenGroup = vi.fn()
+    render(<GroupChat groupId={3} onOpenGroup={onOpenGroup} />)
+    fireEvent.click(screen.getByRole("button", { name: "群" }))
+    expect(onOpenGroup).toHaveBeenCalledTimes(1)
+  })
+
+  it("expands the privacy notice to public log and no-E2E copy", () => {
+    render(<GroupChat groupId={3} />)
+    fireEvent.click(document.querySelector("[data-privacy-notice]")!)
+    expect(screen.getByText(/任何人都能读取/)).toBeInTheDocument()
+    expect(screen.getByText(/没有端到端加密/)).toBeInTheDocument()
   })
 })

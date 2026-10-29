@@ -1,10 +1,11 @@
 "use client"
 
-import { use } from "react"
+import { use, useState } from "react"
 import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
 
 import { GroupChat } from "@/components/group-chat"
+import { GroupOverviewSheet } from "@/components/group-overview-sheet"
 import { MobileNavbar } from "@/components/mobile-navbar"
 import { Button } from "@/components/ui/button"
 
@@ -14,19 +15,31 @@ export default function GroupChatPage({
   params: Promise<{ groupId: string }>
 }) {
   const { groupId } = use(params)
+  const numericId = Number(groupId)
+  const [overviewOpen, setOverviewOpen] = useState(false)
 
   return (
     <main className="min-h-screen bg-background">
       <MobileNavbar />
-      <div className="mx-auto w-full max-w-2xl px-4 pb-28 pt-20">
-        <Button asChild variant="ghost" size="sm" className="mb-3 -ml-2">
-          <Link href={`/groups/${groupId}`}>
-            <ArrowLeft className="mr-1.5 h-4 w-4" /> Group overview
+      <div className="mx-auto w-full max-w-lg px-4 pb-28 pt-20">
+        <Button asChild variant="ghost" size="sm" className="mb-2 -ml-2">
+          <Link href="/chat">
+            <ArrowLeft className="mr-1.5 h-4 w-4" />
+            消息
           </Link>
         </Button>
-        <h1 className="mb-3 text-2xl font-bold tracking-tight">Group chat</h1>
-        <GroupChat groupId={Number(groupId)} />
+        <GroupChat
+          groupId={Number.isFinite(numericId) ? numericId : 0}
+          onOpenGroup={() => setOverviewOpen(true)}
+        />
       </div>
+      {Number.isFinite(numericId) ? (
+        <GroupOverviewSheet
+          groupId={numericId}
+          open={overviewOpen}
+          onOpenChange={setOverviewOpen}
+        />
+      ) : null}
     </main>
   )
 }
