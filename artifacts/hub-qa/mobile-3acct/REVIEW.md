@@ -128,3 +128,14 @@ Viewport 390×844 / DPR2 · live `:3100` · hub-managed dev server (never restar
 | Proposals page parsed empty `?ids=` as proposal **0** | drop empty tokens before numeric parsing |
 | Proposal list discarded all reads when one of ten `get_proposal` calls 429'd | bounded 3-wide read, newest-first, partial results + explicit `N 个提案读取失败` |
 | Sheet/Treasury frames captured mid-animation | driver waits for dialog geometry / text to settle |
+
+### Indexer addendum (2026-10-29 12:34 CST)
+- At the end of this round `:8787` came back with a **fresh cursor near head**
+  (`last_processed_block 275245874`, age ~22s, intermittent `HTTP 429`), not a
+  replay of old blocks. A fresh cursor started at the finalized head therefore
+  skips the blocks where group-16/18 messages were published, so
+  `GET /messages?group_id=16|18` returns `{"items":[]}` even though both
+  messages are present in their chain receipts (verified directly via
+  `tx` JSON-RPC on fastnear for `BkddKpiQvKm6G1uh7SmZagoPnzBdSeynep3kVZGHTXRy`).
+- Consequence: chat frames correctly show the honest "索引器同步中" state, and
+  `jobs-ia-e2e-result.json` stays **partial**. No fake "indexed" evidence was written.
