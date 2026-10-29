@@ -17,11 +17,20 @@ export interface ConvertState {
   pending: boolean
   submitting: boolean
   error: string | null
-  submit: (daoName: string, purpose: string) => Promise<void>
+  submit: (daoName: string, purpose: string) => Promise<string>
   refresh: () => Promise<void>
 }
 
-export function useConvert(groupId: number): ConvertState {
+export interface ConvertOptions {
+  /** Delay between chain reads while waiting for the factory callback. */
+  pollIntervalMs?: number
+  /** Terminal deadline; submit throws instead of returning an unconfirmed ID. */
+  deadlineMs?: number
+}
+
+export function useConvert(groupId: number, options: ConvertOptions = {}): ConvertState {
+  const pollIntervalMs = options.pollIntervalMs ?? 3000
+  const deadlineMs = options.deadlineMs ?? 180_000
   const session = useNearSession()
   const [group, setGroup] = useState<GroupView | null>(null)
   const [accountId, setAccountId] = useState<string | null>(null)
@@ -73,7 +82,7 @@ export function useConvert(groupId: number): ConvertState {
   }, [refresh])
 
   const submit = useCallback(
-    async (daoName: string, purpose: string) => {
+    async (daoName: string, purpose: string): Promise<string> => {
       if (!session || !accountId || !group) {
         throw new Error("Wallet and group are required")
       }
@@ -94,21 +103,25 @@ export function useConvert(groupId: number): ConvertState {
           CONVERT_DEPOSIT,
         )
         // The factory callback lands after the owner transaction executes, so
-        // the immediate read still shows convert_pending. Poll until the final
-        // state arrives; never invent dao_id from the submitted hash.
-        const deadline = Date.now() + 180_000
+        // the immediate read still shows convert_pending. Poll until the chain
+        // returns a dao_id; every non-terminal state is an error.
+        const deadline = Date.now() + deadlineMs
         let sawPending = false
-        while (Date.now() < deadline) {
+        for (;;) {
           const next = await client.getGroup(groupId)
           setGroup(next)
-          if (next.dao_id) break
-          if (next.convert_pending) {
-            sawPending = true
-          } else if (sawPending) {
-            // The callback cleared pending without a dao_id: factory failure.
-            break
+          if (next.dao_id) return next.dao_id
+          if (next.convert_pending) sawPending = true
+          else if (sawPending) {
+            throw new Error("升级未完成：链上回调没有写入 DAO")
           }
-          await new Promise((resolve) => setTimeout(resolve, 3000))
+          const remaining = deadline - Date.now()
+          if (remaining <= 0) {
+            throw new Error("升级确认超时：尚未读到链上 DAO ID")
+          }
+          await new Promise((resolve) =>
+            setTimeout(resolve, Math.min(pollIntervalMs, remaining)),
+          )
         }
       } catch (reason) {
         setError(reason instanceof Error ? reason.message : String(reason))
@@ -117,7 +130,7 @@ export function useConvert(groupId: number): ConvertState {
         setSubmitting(false)
       }
     },
-    [session, accountId, group, groupId, refresh],
+    [session, accountId, group, groupId, pollIntervalMs, deadlineMs],
   )
 
   const reason = !accountId
