@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { useGroupVault } from "@/hooks/use-group-vault"
+import { formatFtAmount } from "@/lib/near/format"
 
 export default function GroupJoinPage({
   params,
@@ -28,29 +29,30 @@ export default function GroupJoinPage({
       <MobileNavbar />
       <div className="mx-auto w-full max-w-lg space-y-4 px-4 pb-28 pt-20">
         <Button asChild variant="ghost" size="sm" className="-ml-2">
-          <Link href={`/groups/${raw}`}>
-            <ArrowLeft className="mr-1.5 h-4 w-4" /> Group overview
+          <Link href="/discover">
+            <ArrowLeft className="mr-1.5 h-4 w-4" />
+            返回发现
           </Link>
         </Button>
 
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Paid join</h1>
+          <h1 className="text-2xl font-bold tracking-tight">付费进群</h1>
           <p className="mt-1 text-xs text-muted-foreground">
-            Exact NEP-141 ft_transfer_call. Paid membership is not voting weight.
+            支付入群币后成为成员，然后进入群聊。付费不等于投票权重。
           </p>
         </div>
 
         {loading ? (
-          <p className="text-sm text-muted-foreground">Loading group…</p>
+          <p className="text-sm text-muted-foreground">正在读取群信息…</p>
         ) : error || !group ? (
           <Card className="shadow-none">
             <CardContent className="space-y-3 p-4 text-sm">
-              <p className="font-medium">Group not found</p>
+              <p className="font-medium">群不存在或读取失败</p>
               <p className="text-xs text-muted-foreground">
-                {error ?? `No group with ID ${raw}.`}
+                {error ?? `没有 ID 为 ${raw} 的群。`}
               </p>
               <Button asChild variant="outline" size="sm">
-                <Link href="/join">Enter a group ID</Link>
+                <Link href="/discover">发现公开群</Link>
               </Button>
             </CardContent>
           </Card>
@@ -62,23 +64,21 @@ export default function GroupJoinPage({
                   <div>
                     <p className="text-sm font-semibold">{group.name}</p>
                     <p className="text-xs text-muted-foreground">
-                      {group.description || "No description"}
+                      {group.description || "群主还没有写简介"}
                     </p>
                   </div>
                   <Badge variant={group.dao_id ? "default" : "secondary"}>
-                    {group.dao_id ? "DAO" : "Group"}
+                    {group.dao_id ? "已是 DAO" : "群聊"}
                   </Badge>
                 </div>
-                <p className="font-mono text-[11px] text-muted-foreground">
-                  group #{group.id} · fee {group.join_fee}
+                <p className="text-[11px] text-muted-foreground">
+                  群 #{group.id} · {group.member_count} 位成员 · 入群费{" "}
+                  {formatFtAmount(group.join_fee, 6)} 入群币
                 </p>
               </CardContent>
             </Card>
             <GroupJoinCard groupId={groupId} />
             <PrivacyNotice compact />
-            <Button asChild variant="outline" className="w-full">
-              <Link href={`/groups/${groupId}`}>Continue to overview</Link>
-            </Button>
           </>
         )}
       </div>

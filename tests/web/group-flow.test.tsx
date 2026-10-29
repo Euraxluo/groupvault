@@ -28,6 +28,12 @@ vi.mock("@/hooks/use-group-vault", () => ({
   useJoinGroup: () => ({ join, submitting: false, error: hookState.joinError ?? null }),
 }))
 
+const isMember = vi.fn()
+
+vi.mock("@/lib/near/groupvault", () => ({
+  createGroupVaultClient: () => ({ isMember }),
+}))
+
 vi.mock("@/lib/near/deposits", () => ({
   CREATE_GROUP_DEPOSIT: "500000000000000000000000",
 }))
@@ -165,13 +171,39 @@ describe("create group flow", () => {
 describe("paid join card", () => {
   it("uses one FT transfer call amount and refreshes only after the receipt", async () => {
     join.mockResolvedValue({ transactionHash: "tx-join", receiptIds: ["r"] })
+    isMember.mockResolvedValue(true)
     render(<GroupJoinCard groupId={3} />)
 
-    expect(screen.getByText(/Paid membership is not voting weight/i)).toBeInTheDocument()
-    fireEvent.click(screen.getByRole("button", { name: /Pay and join/i }))
+    expect(screen.getByText(/付费进群只买成员资格/)).toBeInTheDocument()
+    expect(screen.getByText("1 入群币")).toBeInTheDocument()
+    fireEvent.click(screen.getByRole("button", { name: /支付 1 入群币并加入/ }))
 
     await waitFor(() => expect(join).toHaveBeenCalledWith("1000000"))
     await waitFor(() => expect(refresh).toHaveBeenCalled())
+    await waitFor(() => expect(isMember).toHaveBeenCalledWith(3, "bob.testnet"))
+  })
+
+  it("submits a human custom amount as exact base units", async () => {
+    join.mockResolvedValue({ transactionHash: "tx-join", receiptIds: ["r"] })
+    isMember.mockResolvedValue(true)
+    render(<GroupJoinCard groupId={3} />)
+
+    fireEvent.change(screen.getByLabelText(/支付数量/), {
+      target: { value: "1.25" },
+    })
+    fireEvent.click(screen.getByRole("button", { name: /支付 1.25 入群币并加入/ }))
+
+    await waitFor(() => expect(join).toHaveBeenCalledWith("1250000"))
+  })
+
+  it("does not claim membership while the chain read stays false", async () => {
+    join.mockResolvedValue({ transactionHash: "tx-join", receiptIds: ["r"] })
+    isMember.mockResolvedValue(false)
+    render(<GroupJoinCard groupId={3} />)
+
+    fireEvent.click(screen.getByRole("button", { name: /支付 1 入群币并加入/ }))
+    await waitFor(() => expect(join).toHaveBeenCalled())
+    expect(screen.queryByText(/已确认入群/)).not.toBeInTheDocument()
   })
 
   it("shows membership after a confirmed chain refresh", () => {
@@ -181,12 +213,18 @@ describe("paid join card", () => {
       group: { ...(groupState.group as object), member_count: 2 },
     }
     render(<GroupJoinCard groupId={3} />)
-    expect(screen.getByText(/You are a member/i)).toBeInTheDocument()
-    expect(screen.queryByRole("button", { name: /Pay and join/i })).not.toBeInTheDocument()
+    expect(screen.getByText("你已经是这个群的成员。")).toBeInTheDocument()
+    expect(screen.getByRole("link", { name: "进入群聊" })).toHaveAttribute(
+      "href",
+      "/groups/3/chat",
+    )
+    expect(
+      screen.queryByRole("button", { name: /支付 1 入群币并加入/ }),
+    ).not.toBeInTheDocument()
   })
 
   it("does not claim membership from wallet submission alone", () => {
     render(<GroupJoinCard groupId={3} />)
-    expect(screen.queryByText(/You are a member/i)).not.toBeInTheDocument()
+    expect(screen.queryByText("你已经是这个群的成员。")).not.toBeInTheDocument()
   })
 })
