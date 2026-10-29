@@ -158,7 +158,7 @@ export function GroupChat({
         <div className="space-y-2 rounded-2xl border border-primary/30 bg-primary/5 p-4">
           <p className="text-sm font-medium">连接钱包后聊天</p>
           <p className="text-[13px] leading-5 text-muted-foreground">
-            成员用钱包签名发布公开链上消息。先连接 testnet 钱包或 Keypair (demo)。
+            成员用钱包签名发布公开链上消息。先连接 testnet 钱包或演示密钥。
           </p>
           <Button
             id="btn-chat-connect"

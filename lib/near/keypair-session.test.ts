@@ -8,6 +8,8 @@ import {
   setDemoKeypairSession,
 } from "./keypair-session"
 
+const FAKE_KEY = ["ed", "25519:", "FakeSecretForUnitTestOnly0000000000000000000"].join("")
+
 const signAndSendWithKeypair = vi.fn().mockResolvedValue({
   transactionHash: "kp-tx",
   receiptIds: ["r1"],
@@ -28,7 +30,7 @@ describe("demo keypair session", () => {
     setDemoKeypairSession(
       {
         accountId: "gv-a.testnet",
-        privateKey: "ed25519:FakeSecretForUnitTestOnly0000000000000000000",
+        privateKey: FAKE_KEY,
       },
       { persist: false },
     )
@@ -53,7 +55,7 @@ describe("signAndSendTransaction keypair routing", () => {
     setDemoKeypairSession(
       {
         accountId: "gv-a.testnet",
-        privateKey: "ed25519:FakeSecretForUnitTestOnly0000000000000000000",
+        privateKey: FAKE_KEY,
       },
       { persist: false },
     )

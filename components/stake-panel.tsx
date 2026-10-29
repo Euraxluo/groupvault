@@ -94,8 +94,8 @@ export function StakePanel({ daoId }: { daoId: string }) {
         <CardContent className="space-y-3 p-4 text-sm">
           <p className="font-medium">Connect a wallet to load staking</p>
           <p className="text-xs text-muted-foreground">
-            Views need a wallet-selector session in this app. Use Connect →
-            Keypair (demo) for unattended proof.
+            本应用的只读查询需要钱包会话。点击顶部钱包按钮，选择 MyNearWallet
+            或演示密钥。
           </p>
         </CardContent>
       </Card>

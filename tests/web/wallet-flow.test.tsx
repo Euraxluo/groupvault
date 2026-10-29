@@ -27,9 +27,10 @@ describe("copied shell wallet dialog", () => {
     walletState = { ready: true, accountId: null, error: null, connecting: false }
     render(<ConnectWalletDialog open onOpenChange={() => {}} />)
 
-    expect(screen.getByText(/No wallet connected/i)).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: /Connect wallet/i })).toBeEnabled()
-    expect(screen.getByRole("button", { name: /Keypair \(demo\)/i })).toBeEnabled()
+    expect(screen.getByRole("heading", { name: "连接 NEAR 钱包" })).toBeInTheDocument()
+    expect(screen.getByText("没有钱包？")).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /连接 MyNearWallet/i })).toBeEnabled()
+    expect(screen.getByRole("button", { name: /演示密钥 · 仅 testnet/i })).toBeEnabled()
     expect(screen.queryByText(/zkLogin|passkey|Sui Wallet/i)).not.toBeInTheDocument()
   })
 
@@ -45,7 +46,7 @@ describe("copied shell wallet dialog", () => {
     await waitFor(() =>
       expect(screen.getByText("alice.testnet")).toBeInTheDocument(),
     )
-    expect(screen.getByRole("button", { name: /Disconnect/i })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /断开连接/i })).toBeInTheDocument()
   })
 
   it("surfaces a wallet error instead of pretending to sign", () => {

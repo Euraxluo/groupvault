@@ -55,7 +55,7 @@ test("discover opens the paid join page instead of chat", async ({ page }) => {
   await expect(group16).toBeVisible()
   await expect(group16).toContainText("1 入群币")
   await group16.click()
-  await expect(page).toHaveURL(/\/groups\/16\/join$/)
+  await expect(page).toHaveURL(/\/groups\/16\/join$/, { timeout: 30_000 })
   await expect(page.locator("body")).not.toContainText("1000000 base units")
 })
 

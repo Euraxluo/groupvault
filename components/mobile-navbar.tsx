@@ -55,6 +55,7 @@ export function MobileNavbar() {
               variant="outline"
               size="sm"
               className="h-9 min-h-9 max-w-[9.5rem] rounded-full px-3 text-xs"
+              title={wallet.accountId ?? undefined}
               onClick={() => setWalletOpen(true)}
             >
               <Wallet className="mr-1.5 h-3.5 w-3.5 shrink-0" />

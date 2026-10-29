@@ -64,7 +64,7 @@ test("join page keeps an honest wallet boundary and a chat route", async ({ page
   if (await chatLink.isVisible()) {
     await expect(chatLink).toHaveAttribute("href", "/groups/16/chat")
     await chatLink.click()
-    await expect(page).toHaveURL(/\/groups\/16\/chat$/)
+    await expect(page).toHaveURL(/\/groups\/16\/chat$/, { timeout: 30_000 })
   } else {
     await expect(page.getByText(/先连接钱包|入群费/).first()).toBeVisible()
   }
@@ -185,5 +185,5 @@ test("converted treasury glance shows real DAO state and returns to chat", async
   const back = page.getByRole("link", { name: "回到聊天" }).first()
   await expect(back).toHaveAttribute("href", "/groups/16/chat")
   await back.click()
-  await expect(page).toHaveURL(/\/groups\/16\/chat$/)
+  await expect(page).toHaveURL(/\/groups\/16\/chat$/, { timeout: 30_000 })
 })

@@ -225,7 +225,7 @@ export async function connectDemoKeypair(
   // Disconnect and there is nothing left to submit.
   if (
     await page
-      .getByRole("button", { name: /Disconnect|断开钱包/i })
+      .getByRole("button", { name: /Disconnect|断开连接|断开钱包/i })
       .first()
       .isVisible()
       .catch(() => false)
@@ -234,16 +234,23 @@ export async function connectDemoKeypair(
     return
   }
   // Prefer UI path so sessionStorage is also set for the tab.
-  const keypairButton = page.getByRole("button", { name: /Keypair \(demo\)/i })
+  const keypairButton = page.getByRole("button", {
+    name: /Keypair \(demo\)|演示密钥/i,
+  })
   if (await keypairButton.isVisible().catch(() => false)) {
     await keypairButton.click()
-    await page.getByLabel("Account ID").fill(credentials.accountId)
-    await page.getByLabel("Private key").fill(credentials.privateKey)
-    await page.getByRole("button", { name: /Connect keypair/i }).click()
+    await page.getByText("手动贴 key", { exact: true }).click()
+    await page.getByLabel(/Account ID|账号 ID/i).fill(credentials.accountId)
+    await page.getByLabel(/Private key|私钥/i).fill(credentials.privateKey)
+    await page
+      .getByRole("button", { name: /Connect keypair|连接手动密钥/i })
+      .click()
   } else {
     // Injection already hydrated; the connect action resolves immediately.
     await page
-      .getByRole("button", { name: /Connect wallet|连接钱包/i })
+      .getByRole("button", {
+        name: /Connect wallet|连接钱包|连接 MyNearWallet/i,
+      })
       .click()
   }
 
@@ -266,7 +273,11 @@ export async function connectDemoKeypair(
 
 export async function connectMyNearWallet(page: Page): Promise<void> {
   await page.getByRole("button", { name: CONNECT_CHIP }).first().click()
-  await page.getByRole("button", { name: /Connect wallet|连接钱包/i }).click()
+  await page
+    .getByRole("button", {
+      name: /Connect wallet|连接钱包|连接 MyNearWallet/i,
+    })
+    .click()
 
   const deadline = Date.now() + WALLET_APPROVAL_TIMEOUT_MS
   while (Date.now() < deadline) {
