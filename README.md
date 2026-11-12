@@ -4,6 +4,8 @@ GroupVault is a NEAR testnet demo for paid NEP-141 groups that convert into a
 Sputnik DAO with one owner signature. Chat messages are public plaintext logs;
 membership does not grant voting weight.
 
+Public repository: https://github.com/Euraxluo/groupvault
+
 The frontend is a clean archive of the existing Next.js multisig shell, pinned
 at `ddb4ac2051ee0a3d931b2e0d69b8ba15d46c954a`. All GroupVault work happens in
 this repository, never in the source checkout.
@@ -63,8 +65,12 @@ load; `INDEXER_RPC_URL` should point at a dedicated provider for long runs.
 
 ## Product invariants
 
+- Joining requires payment in the group's designated NEP-141 fungible token.
+  The demo join fee is one whole join token (1,000,000 base units at six
+  decimals); it is not a NEAR native-token payment.
 - Convert is exactly one wallet signature to GroupVault, then Sputnik
-  `factory.create`. The real factory's `create` returns unit and only its own
+  `factory.create` through the official factory `sputnikv2.testnet`. The real
+  factory's `create` returns unit and only its own
   callback returns a boolean, so an empty success payload is treated as
   accepted while any non-empty payload must still be explicit JSON `true`.
   `dao_id` is written only in that private callback.
@@ -75,6 +81,22 @@ load; `INDEXER_RPC_URL` should point at a dedicated provider for long runs.
 - Staking the same join FT is the only source of TokenWeight.
 - GroupVault never holds user keys and never signs a user product action.
 
+## Demo and security status
+
+GroupVault is an unaudited NEAR **testnet** hackathon demo, not a production
+social or treasury product. The public walkthrough uses temporary testnet
+accounts. The contract does not hold, escrow, or transmit user private keys.
+Before Convert, the owner confirms that the real Sputnik factory deployment
+requires approximately 10 NEAR. After conversion, DAO voting uses Sputnik
+`TokenWeight`; that weight comes only from staking the same join FT through the
+configured Sputnik staking contract. Paid membership alone never creates vote
+weight.
+
+The 60–90 second demo recording is prepared locally for the hackathon post and
+is intentionally not committed when its file size adds no review value. The
+underlying replayable evidence and rehearsal storyboard remain under
+`artifacts/`.
+
 ## Documentation
 
 - Local demo order (install → services → wallet → product path → e2e):
@@ -83,6 +105,3 @@ load; `INDEXER_RPC_URL` should point at a dedicated provider for long runs.
 - Release gate and verification proof: `docs/RELEASE-CHECKLIST.md`
 - Contracts, architecture and decisions: `docs/CONTRACT-INTERFACES.md`,
   `docs/ARCHITECTURE.md`, `docs/DECISIONS.md`
-- Planning source: `/Users/echo/project/groupvault-docs/plans/`
-- Task board: `/Users/echo/project/groupvault-docs/plans/TASKS.md`
-- Frontend pin: `/Users/echo/project/groupvault-docs/orchestration/frontend-copy-pin.txt`
